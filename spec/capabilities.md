@@ -46,14 +46,14 @@ Double-entry journal generated deterministically from confirmed invoices. Trial 
 - Every figure is clickable → rule applied (with legal reference) + the source invoices.
 - Exports: GSTR-1 JSON (portal offline-tool shape), Excel workbook, monthly CA pack (zip).
 
-## C7 CA scrutiny [planned P3]
+## C7 CA scrutiny [built P3]
 Upload CA's filed 3B (JSON / PDF / typed figures) → line-by-line diff vs recompute → generated
 "questions to ask your CA" + plain-language explanation of the filed return.
 
-## C8 GSTR-2B + ITC match + alerts [planned P3]
+## C8 GSTR-2B + ITC match + alerts [built P3]
 Import 2B JSON; match purchase invoices; alerts: vendor not filed / ITC at risk, duplicates, RCM unpaid.
 
-## C9 TDS + payroll [planned P4]
+## C9 TDS + payroll [built P4]
 194C/194J/194I/194H/194Q + 192 salary; thresholds; 26Q/24Q data; payroll import (CSV).
 
 ## C10 Bank statement import + reconciliation [planned P5]
@@ -82,3 +82,5 @@ Every call logged with model, purpose, tokens and USD cost; monthly running tota
 - Assumed: import of services from foreign vendors → IGST under RCM (Sec 5(3) IGST Act), reported in
   3B 3.1(d), ITC claimed in 4A(2) "import of services" when eligible (user confirms eligibility).
 - Assumed: LLM pricing per Anthropic list (cached 2026-11-03): Sonnet 5.5 $2/$10, Haiku 5.5 $0.10/$0.50 per MTok.
+- Assumed (P3): filed-3B comparison tolerance ₹1 per figure; the latest *confirmed* filed 3B for a period is the one used by alerts. PDF transcription is never trusted until the user confirms it. 2B matching key = vendor GSTIN + normalised invoice number (upper-case, punctuation/leading zeros stripped); fuzzy fallback = same GSTIN + same tax (±₹1) + similar number (flagged POSSIBLE_MATCH, never auto-accepted). RCM purchases are excluded from 2B matching (they do not appear in 2B ITC).
+- Assumed (P4): TDS base = invoice value excluding GST (CBDT Circular 23/2017); TDS timing = invoice date (credit). Rates/thresholds for 194C/194J/194I/194H/194Q as for FY 2025-26 onwards; Income-tax Act 1961 section numbers used (Income-tax Act 2025 renumbers — confirm with CA). Payee PAN defaults from vendor GSTIN; payee type from PAN 4th letter (P/H = individual/HUF) unless the user overrides. No PAN -> 20% (Sec 206AA). Sec 195 (non-resident) never computed. Salary: new regime FY 2025-26 slabs applied to later years; std deduction 75,000; 87A rebate with marginal relief; 4% cess; surcharge/old regime -> flagged for CA. TDS rounded to the nearest rupee.
