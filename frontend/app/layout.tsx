@@ -8,6 +8,7 @@ const NAV: [string, [string, string][]][] = [
   ["Books", [["/inbox", "Invoice inbox"], ["/review", "Review queue"], ["/invoices", "Invoices"], ["/ledger", "Ledger"], ["/bank", "Bank reconciliation"], ["/rules", "Vendor/customer rules"]]],
   ["GST", [["/gst", "GSTR-3B / GSTR-1"], ["/filings", "Filing history"], ["/scrutiny", "CA scrutiny"], ["/itc", "GSTR-2B / ITC match"]]],
   ["TDS & payroll", [["/tds", "TDS register"], ["/payroll", "Payroll / Sec 192"]]],
+  ["Compliance", [["/calendar", "Compliance calendar"], ["/close", "Month-close checklist"]]],
   ["System", [["/usage", "LLM spend"], ["/audit", "Audit trail"]]],
 ];
 
