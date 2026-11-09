@@ -25,6 +25,7 @@ Data lives in `data/` (SQLite `data/account0.db`, documents, watched inbox `data
 ./scripts/gate-p4.sh   # + TDS register/26Q, payroll Sec 192/24Q
 ./scripts/gate-p5.sh   # + bank statement import & reconciliation
 ./scripts/gate-p6.sh   # + compliance calendar & month-close checklist
+./scripts/gate-p7.sh   # + learning layer (real grounded Q&A, walkthroughs, DIY coaching)
 ```
 Backend tests only: `cd backend && ./gradlew test`. Frontend: `cd frontend && npm test && npx next build`.
 

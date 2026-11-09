@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api, jsonBody } from "@/lib/api";
 import { inr } from "@/lib/format";
+import { Why } from "@/lib/Why";
 
 function currentFy() { const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-${String((y + 1) % 100).padStart(2, "0")}`; }
 
@@ -21,7 +22,7 @@ export default function Tds() {
       <h1>TDS register (26Q data)</h1>
       <p className="muted">You decide the section for each purchase — Account0 never guesses. It then applies the rate and thresholds with plain code and keeps the year-to-date position per vendor. TDS base = invoice value excluding GST.</p>
       <div className="stub">Rates/thresholds are as understood for FY 2025-26 onwards (Finance Act 2025) under the Income-tax Act 1961 section numbers. Confirm with your CA, especially after the Income-tax Act 2025 renumbering. Payments to non-residents (Sec 195) are never computed.</div>
-      <h2>Needs a TDS decision ({pending.length})</h2>
+      <h2>Needs a TDS decision ({pending.length}) <Why k="TDS" /></h2>
       {msg && <div className="card err">{msg}</div>}
       <table>
         <thead><tr><th>Invoice</th><th>Vendor</th><th className="num">Value (excl. GST)</th><th>Section</th><th>PAN</th><th>Payee</th><th /></tr></thead>

@@ -1,4 +1,5 @@
 "use client";
+import { Why } from "@/lib/Why";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { inr } from "@/lib/format";
@@ -36,7 +37,7 @@ function FigTable({ figs, onPick }: { figs: any[]; onPick: (f: any) => void }) {
   return (
     <table>
       <thead><tr><th>Table</th><th className="num">Taxable value</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th><th className="num">Cess</th></tr></thead>
-      <tbody>{figs.map((f) => <tr key={f.key}><td><a className="fig" onClick={() => onPick(f)}>{f.label}</a></td>{cell(f, "taxable_paise")}{cell(f, "igst_paise")}{cell(f, "cgst_paise")}{cell(f, "sgst_paise")}{cell(f, "cess_paise")}</tr>)}</tbody>
+      <tbody>{figs.map((f) => <tr key={f.key}><td><a className="fig" onClick={() => onPick(f)}>{f.label}</a><Why k={f.key} /></td>{cell(f, "taxable_paise")}{cell(f, "igst_paise")}{cell(f, "cgst_paise")}{cell(f, "sgst_paise")}{cell(f, "cess_paise")}</tr>)}</tbody>
     </table>
   );
 }

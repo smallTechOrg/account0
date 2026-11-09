@@ -62,7 +62,7 @@ CSV/XLSX import with auto-detected (overridable) column mapping, idempotent re-i
 ## C11 Compliance calendar + month-close checklist [built P6]
 GST, TDS, PF/ESI, ROC (AOC-4, MGT-7/7A, DIR-3 KYC, ADT-1), advance tax, ITR-6 — with status.
 
-## C12 Learning layer [planned P7; inline "why" notes from P2]
+## C12 Learning layer [built P7]
 Walkthroughs using the user's data, inline "why" notes, Q&A with citations (CGST Act sections, rules,
 CBIC circulars), DIY coaching mode.
 
@@ -87,3 +87,4 @@ Every call logged with model, purpose, tokens and USD cost; monthly running tota
 - Assumed (P4): TDS base = invoice value excluding GST (CBDT Circular 23/2017); TDS timing = invoice date (credit). Rates/thresholds for 194C/194J/194I/194H/194Q as for FY 2025-26 onwards; Income-tax Act 1961 section numbers used (Income-tax Act 2025 renumbers — confirm with CA). Payee PAN defaults from vendor GSTIN; payee type from PAN 4th letter (P/H = individual/HUF) unless the user overrides. No PAN -> 20% (Sec 206AA). Sec 195 (non-resident) never computed. Salary: new regime FY 2025-26 slabs applied to later years; std deduction 75,000; 87A rebate with marginal relief; 4% cess; surcharge/old regime -> flagged for CA. TDS rounded to the nearest rupee.
 - Assumed (P5): auto-match only if score >= 85 and the runner-up is >= 15 points lower; receipts up to 12% below the invoice are scored as "possibly net of TDS/charges" and only suggested unless invoice number + name both appear. Statement dates are day-first (Indian banks).
 - Assumed (P6): calendar = obligations whose DUE DATE falls in the FY (so it carries last year's ROC/ITR/GSTR-9 filings); default AGM 30 Sep (editable via setting `company.agm_date`, moves ADT-1/AOC-4/MGT-7A); statutory un-extended dates for a monthly GST filer; PF/ESI/24Q/Form 16 only when payroll exists or `company.has_employees=true`; advance tax, ADT-1, DPT-3, GSTR-9, tax audit are "if applicable" (no alerts). Alerts: overdue (<=45 days back) HIGH, due within 7 days MEDIUM/LOW. Professional tax (state-specific) is not covered.
+- Assumed (P7): the reference corpus (`backend/src/main/resources/corpus/corpus.json`, 57 entries) is my own paraphrase of provisions as understood for FY 2025-26 — NOT verified legal text; the UI says so. Q&A: deterministic retrieval; if nothing relevant, decline with no LLM call; otherwise ONE Sonnet call, citations validated against the retrieved ids (unknown ids stripped; uncited answers flagged "ungrounded"). Simplification vs. spec/agent.md: no tool loop - period/invoice facts are attached by code instead. DIY "readiness" = months where the user's recompute equalled the CA's confirmed filed 3B (needs >= 3 compared months).

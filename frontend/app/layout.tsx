@@ -9,6 +9,7 @@ const NAV: [string, [string, string][]][] = [
   ["GST", [["/gst", "GSTR-3B / GSTR-1"], ["/filings", "Filing history"], ["/scrutiny", "CA scrutiny"], ["/itc", "GSTR-2B / ITC match"]]],
   ["TDS & payroll", [["/tds", "TDS register"], ["/payroll", "Payroll / Sec 192"]]],
   ["Compliance", [["/calendar", "Compliance calendar"], ["/close", "Month-close checklist"]]],
+  ["Learn", [["/learn", "Learn & ask"]]],
   ["System", [["/usage", "LLM spend"], ["/audit", "Audit trail"]]],
 ];
 

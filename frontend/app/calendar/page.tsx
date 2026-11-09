@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, jsonBody } from "@/lib/api";
+import { Why } from "@/lib/Why";
 
 function currentFy() { const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-${String((y + 1) % 100).padStart(2, "0")}`; }
 const TAG: Record<string, string> = { DONE: "ok", NA: "", OVERDUE: "bad", DUE_SOON: "warn", UPCOMING: "" };
@@ -24,7 +25,7 @@ export default function Calendar() {
   const shown = cal ? cal.items.filter((i: any) => (!cat || i.category === cat) && !(hide && (i.state === "DONE" || i.state === "NA"))) : [];
   return (
     <>
-      <h1>Compliance calendar</h1>
+      <h1>Compliance calendar <Why k="CALENDAR" /></h1>
       <div className="stub">{cal?.assumptions}</div>
       <div className="card row">
         <div><label>Financial year</label><input size={8} value={fy} onChange={(e) => setFy(e.target.value)} /></div>

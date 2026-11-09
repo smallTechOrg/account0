@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { inr } from "@/lib/format";
+import { Why } from "@/lib/Why";
 
 const LABEL: Record<string, [string, string]> = {
   MATCHED: ["Matched", "ok"], AMOUNT_MISMATCH: ["Amount differs", "bad"], POSSIBLE_MATCH: ["Possible match", "warn"],
@@ -22,7 +23,7 @@ export default function Itc() {
   };
   return (
     <>
-      <h1>GSTR-2B and ITC matching</h1>
+      <h1>GSTR-2B and ITC matching <Why k="2B" /></h1>
       <p className="muted">ITC can be claimed only for invoices that appear in your GSTR-2B (Sec 16(2)(aa) CGST Act). Download the 2B JSON from the portal and import it; Account0 matches it to your confirmed purchase invoices by vendor GSTIN + invoice number + tax amount (within ₹1).</p>
       <div className="card row">
         <div><label>Period</label><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} /></div>

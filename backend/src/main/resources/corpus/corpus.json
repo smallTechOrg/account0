@@ -1,0 +1,458 @@
+[
+ {
+  "id": "cgst-9",
+  "title": "Levy of GST",
+  "citation": "Sec 9(1) CGST Act 2017",
+  "keywords": "levy tax charge rate supplier liable",
+  "text": "GST is levied on intra-state supplies of goods or services at notified rates on the transaction value (Sec 15). The supplier is liable to pay it, except where the law shifts liability to the recipient under reverse charge.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-9-3",
+  "title": "Reverse charge (RCM)",
+  "citation": "Sec 9(3) and 9(4) CGST Act; Sec 5(3) and 5(4) IGST Act",
+  "keywords": "reverse charge rcm recipient liable pay notified",
+  "text": "For categories of supplies notified by the Government, the recipient (not the supplier) pays the GST. RCM tax has to be paid in cash through the electronic cash ledger; it cannot be paid by using input tax credit (Sec 49(4)). The recipient can claim the same amount as ITC once paid, if the purchase is for business and ITC is otherwise allowed.",
+  "kind": "provision"
+ },
+ {
+  "id": "igst-5-3",
+  "title": "Import of services is under reverse charge",
+  "citation": "Sec 5(3) IGST Act; Notification 10/2017-Integrated Tax (Rate)",
+  "keywords": "import services foreign vendor overseas non-resident rcm igst software saas subscription",
+  "text": "Services supplied by a person located outside India to a recipient in India (other than a non-taxable online recipient) are notified for reverse charge: the Indian recipient pays IGST. It is reported in GSTR-3B Table 3.1(d), paid in cash, and then claimed as ITC in Table 4(A)(2) 'import of services'.",
+  "kind": "provision"
+ },
+ {
+  "id": "igst-2-10",
+  "title": "Import of services - definition",
+  "citation": "Sec 2(10) IGST Act",
+  "keywords": "import of services definition supplier outside india recipient place of supply",
+  "text": "'Import of services' means a supply where the supplier is located outside India, the recipient is located in India, and the place of supply is in India. All three conditions must hold.",
+  "kind": "provision"
+ },
+ {
+  "id": "igst-2-6",
+  "title": "Export of services - five conditions",
+  "citation": "Sec 2(6) IGST Act",
+  "keywords": "export services conditions foreign exchange convertible recipient outside india zero rated lut",
+  "text": "A supply of services is an 'export' only if: (i) the supplier is in India, (ii) the recipient is outside India, (iii) the place of supply is outside India, (iv) payment is received in convertible foreign exchange (or in INR where RBI permits), and (v) the supplier and recipient are not merely establishments of the same person. Miss any one and it is an ordinary taxable supply.",
+  "kind": "provision"
+ },
+ {
+  "id": "igst-16",
+  "title": "Zero-rated supplies",
+  "citation": "Sec 16 IGST Act",
+  "keywords": "zero rated export sez refund lut bond igst without payment",
+  "text": "Exports of goods or services and supplies to SEZs are zero-rated. You may export without paying IGST under a Letter of Undertaking (LUT) and claim a refund of unutilised ITC, or pay IGST and claim a refund of that tax. In GSTR-3B they appear in Table 3.1(b).",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-rule-96a",
+  "title": "Letter of Undertaking (LUT)",
+  "citation": "Rule 96A CGST Rules",
+  "keywords": "lut letter of undertaking export bond rfd-11 validity",
+  "text": "To export without paying IGST you furnish a LUT in Form GST RFD-11 before the export. It is valid for the financial year for which it is given, so renew it each year, and exports made without a valid LUT must be taxed.",
+  "kind": "provision"
+ },
+ {
+  "id": "igst-13",
+  "title": "Place of supply of services (cross-border)",
+  "citation": "Sec 13 IGST Act",
+  "keywords": "place of supply services location recipient outside india cross border",
+  "text": "Where the supplier or the recipient is outside India, the place of supply of services is generally the location of the recipient (Sec 13(2)), subject to specific exceptions such as immovable property, events and performance-based services.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-16",
+  "title": "Eligibility for input tax credit",
+  "citation": "Sec 16(1)-(2) CGST Act",
+  "keywords": "itc input tax credit eligible conditions invoice receipt paid supplier return 2b",
+  "text": "ITC is allowed only if you hold a tax invoice or debit note, you have received the goods/services, the tax has actually been paid to the Government by the supplier, you have filed your return, and the invoice appears in your GSTR-2B (Sec 16(2)(aa)). If you do not pay the supplier within 180 days of the invoice date, the ITC must be reversed (2nd proviso to Sec 16(2)) and can be re-claimed after payment.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-16-2-aa",
+  "title": "ITC only if the invoice is in GSTR-2B",
+  "citation": "Sec 16(2)(aa) CGST Act",
+  "keywords": "2b gstr-2b itc vendor not filed gstr-1 appear",
+  "text": "Credit can be taken only for invoices whose details have been furnished by the supplier and communicated to you in GSTR-2B. If your vendor has not filed GSTR-1 for the month, their invoice will not be in your GSTR-2B and you cannot claim the credit that month.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-16-4",
+  "title": "Time limit for claiming ITC",
+  "citation": "Sec 16(4) CGST Act",
+  "keywords": "itc time limit november deadline annual return late",
+  "text": "ITC for an invoice must be claimed by 30 November following the end of the financial year to which the invoice relates, or the date of filing the annual return, whichever is earlier. After that the credit is lost.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-17-5",
+  "title": "Blocked credits",
+  "citation": "Sec 17(5) CGST Act",
+  "keywords": "blocked ineligible itc food beverages motor vehicle club membership health insurance works contract gifts personal",
+  "text": "ITC is not available on, among others: motor vehicles for carrying up to 13 persons (with exceptions), food and beverages, outdoor catering, beauty treatment, health services, club memberships, rent-a-cab and life/health insurance (with exceptions), works-contract services for immovable property (other than plant and machinery), goods lost, stolen or given as gifts, and personal consumption.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-31",
+  "title": "Time to issue a tax invoice",
+  "citation": "Sec 31 CGST Act; Rule 47",
+  "keywords": "invoice timing 30 days services issue tax invoice",
+  "text": "For services, the tax invoice must be issued within 30 days of supply (45 days for banks and financial institutions). A registered person must issue invoices in the prescribed format with a serial number unique for the financial year.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-37",
+  "title": "GSTR-1 - outward supplies statement",
+  "citation": "Sec 37 CGST Act; Rule 59",
+  "keywords": "gstr-1 gstr1 outward supplies 11th due b2b b2c exports hsn",
+  "text": "A monthly filer reports all outward supplies in GSTR-1 by the 11th of the next month: B2B invoices by recipient GSTIN, large B2C invoices, exports, credit/debit notes, HSN summary and documents issued. Recipients' ITC depends on what you report here.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-39",
+  "title": "GSTR-3B - summary return and tax payment",
+  "citation": "Sec 39 CGST Act; Rule 61",
+  "keywords": "gstr-3b gstr3b return pay tax 20th due summary 3.1 table",
+  "text": "GSTR-3B is the monthly summary return, due by the 20th of the next month for most taxpayers. The tax payable is paid with the return: ITC is used first as the law permits, and the balance in cash. Table 3.1 reports outward supplies and reverse-charge inward supplies; Table 4 reports ITC; Table 6.1 shows payment.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-47",
+  "title": "Late fee",
+  "citation": "Sec 47 CGST Act",
+  "keywords": "late fee penalty delay gstr-1 gstr-3b per day",
+  "text": "Delay in filing GSTR-1 or GSTR-3B attracts a late fee of ₹50 per day (₹20 per day for nil returns), split equally between CGST and SGST, subject to caps notified by the Government according to turnover. The fee is payable in cash.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-49",
+  "title": "Payment of tax and use of ITC",
+  "citation": "Sec 49 CGST Act",
+  "keywords": "set off utilisation itc cash ledger igst cgst sgst order payment",
+  "text": "ITC of IGST is used first against IGST, then CGST, then SGST. CGST credit is used against CGST and then IGST; SGST credit against SGST and then IGST; CGST credit cannot pay SGST or vice versa. Tax payable under reverse charge cannot be paid from the credit ledger - it must be paid in cash (Sec 49(4)).",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-rule-88a",
+  "title": "Order of utilisation of IGST credit",
+  "citation": "Rule 88A CGST Rules",
+  "keywords": "order igst credit first cgst sgst utilise",
+  "text": "IGST credit has to be fully used first - towards IGST, then CGST, then SGST - before CGST or SGST credit can be used. This is why a company with a large IGST balance often pays little CGST/SGST in cash.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-50",
+  "title": "Interest on late payment and wrong ITC",
+  "citation": "Sec 50 CGST Act",
+  "keywords": "interest 18 percent 24 percent late payment wrong itc",
+  "text": "Interest at 18% per annum is payable on tax paid late (on the net cash liability for the delay period). Interest at 24% per annum applies where ITC was wrongly availed and utilised or excess output tax was reduced.",
+  "kind": "provision"
+ },
+ {
+  "id": "gstr2b",
+  "title": "GSTR-2B",
+  "citation": "Rule 60(7) CGST Rules",
+  "keywords": "gstr-2b 2b auto drafted statement 14th itc statement download json",
+  "text": "GSTR-2B is an auto-generated, static statement of the ITC available to you for a month, based on your suppliers' GSTR-1/5/6 and ISD filings. It is generated around the 14th of the following month and is the basis for claiming ITC in GSTR-3B Table 4. The portal lets you download it as JSON or Excel.",
+  "kind": "provision"
+ },
+ {
+  "id": "gst-hsn",
+  "title": "HSN/SAC codes in GSTR-1",
+  "citation": "Notification 78/2020-CT as amended",
+  "keywords": "hsn sac code digits summary table 12",
+  "text": "Taxpayers must report HSN/SAC codes in the GSTR-1 HSN summary: 4 digits up to ₹5 crore turnover, 6 digits above. Software and IT-enabled services are generally under SAC 9983.",
+  "kind": "provision"
+ },
+ {
+  "id": "gst-b2cl",
+  "title": "B2CL threshold",
+  "citation": "Notification 12/2024-Central Tax",
+  "keywords": "b2cl b2c large inter-state unregistered threshold",
+  "text": "Inter-state supplies to unregistered persons are reported invoice-wise (B2CL) when the invoice value exceeds the notified threshold (₹1,00,000 from 1 Aug 2024); smaller ones are reported as state-wise B2CS totals. Account0 assumes this threshold - confirm it with your CA.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-192",
+  "title": "TDS on salary",
+  "citation": "Sec 192 Income-tax Act 1961",
+  "keywords": "salary tds employer deduct estimate average rate monthly",
+  "text": "An employer deducts tax from salary every month based on the employee's estimated total income for the year, at average rates. The tax for the year is estimated, TDS deducted so far is subtracted, and the balance is spread over the remaining months. Form 16 is issued by 15 June after year end.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-115bac",
+  "title": "New tax regime slabs (FY 2025-26)",
+  "citation": "Sec 115BAC Income-tax Act 1961",
+  "keywords": "new regime slabs standard deduction 75000 cess rates",
+  "text": "Under the default new regime for FY 2025-26: nil up to ₹4,00,000; 5% to ₹8,00,000; 10% to ₹12,00,000; 15% to ₹16,00,000; 20% to ₹20,00,000; 25% to ₹24,00,000; 30% above. Salaried employees get a standard deduction of ₹75,000. Health and education cess of 4% is added. Account0 assumes these slabs for later years - confirm after each Budget.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-87a",
+  "title": "Rebate under Sec 87A (new regime)",
+  "citation": "Sec 87A Income-tax Act 1961",
+  "keywords": "rebate 87a 12 lakh zero tax marginal relief",
+  "text": "For residents under the new regime, taxable income up to ₹12,00,000 (FY 2025-26) gets a rebate of up to ₹60,000 - so no tax is payable. Just above ₹12 lakh, marginal relief limits the tax to the amount by which income exceeds ₹12 lakh.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-194c",
+  "title": "TDS on payments to contractors",
+  "citation": "Sec 194C Income-tax Act 1961",
+  "keywords": "194c contractor works contract labour transport advertising 1 percent 2 percent",
+  "text": "Payments to resident contractors/sub-contractors: TDS at 1% if the payee is an individual/HUF, 2% otherwise. Deduction applies if a single payment exceeds ₹30,000 or total payments in the year exceed ₹1,00,000.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-194j",
+  "title": "TDS on professional and technical fees",
+  "citation": "Sec 194J Income-tax Act 1961",
+  "keywords": "194j professional technical fees director consultant 10 percent 2 percent",
+  "text": "Fees for professional services, royalty and director's fees: 10%. Fees for technical services and call-centre: 2%. Threshold ₹50,000 per payee in a year (from 1 Apr 2025). A professional is, for example, a lawyer, CA, architect or consultant; whether your vendor is 'technical' or 'professional' is a judgement you confirm.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-194i",
+  "title": "TDS on rent",
+  "citation": "Sec 194I Income-tax Act 1961",
+  "keywords": "194i rent land building machinery 10 percent 2 percent office",
+  "text": "Rent: 2% for plant, machinery and equipment; 10% for land, building and furniture. Threshold ₹6,00,000 per year (from 1 Apr 2025).",
+  "kind": "provision"
+ },
+ {
+  "id": "it-194h",
+  "title": "TDS on commission or brokerage",
+  "citation": "Sec 194H Income-tax Act 1961",
+  "keywords": "194h commission brokerage 2 percent",
+  "text": "Commission or brokerage (not for securities): 2% (reduced from 5% from 1 Oct 2024). Threshold ₹20,000 per year (from 1 Apr 2025).",
+  "kind": "provision"
+ },
+ {
+  "id": "it-194q",
+  "title": "TDS on purchase of goods",
+  "citation": "Sec 194Q Income-tax Act 1961",
+  "keywords": "194q purchase goods 50 lakh 0.1 percent turnover 10 crore",
+  "text": "A buyer whose turnover in the preceding year exceeded ₹10 crore deducts 0.1% on purchases from a resident seller above ₹50 lakh in the year (on the excess only).",
+  "kind": "provision"
+ },
+ {
+  "id": "it-195",
+  "title": "TDS on payments to non-residents",
+  "citation": "Sec 195 Income-tax Act 1961",
+  "keywords": "195 non resident foreign payment remittance 15ca 15cb dtaa treaty",
+  "text": "Payments to non-residents that are chargeable to tax in India require TDS at the rate in force or the treaty rate, supported by Forms 15CA/15CB. Whether a foreign SaaS or services payment is taxable in India depends on the nature of the payment and the treaty, so Account0 does not compute it - take your CA's advice before remitting.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-206aa",
+  "title": "Higher TDS rate without PAN",
+  "citation": "Sec 206AA Income-tax Act 1961",
+  "keywords": "pan not available 20 percent higher rate",
+  "text": "If the payee does not furnish a PAN, TDS is deducted at the higher of the normal rate, the rate in force, or 20%.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-40a-ia",
+  "title": "Disallowance for non-deduction of TDS",
+  "citation": "Sec 40(a)(ia) Income-tax Act 1961",
+  "keywords": "disallowance 30 percent expense tds not deducted",
+  "text": "If TDS was required but not deducted (or not deposited by the due date for filing the return), 30% of the expense is disallowed as a deduction in computing the company's profit.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-201-1a",
+  "title": "Interest on late TDS",
+  "citation": "Sec 201(1A) Income-tax Act 1961",
+  "keywords": "interest tds late deduction deposit 1 percent 1.5 percent per month",
+  "text": "Interest is 1% per month from the date TDS was deductible to the date it is deducted, and 1.5% per month from deduction to deposit; each part-month counts as a full month.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-tds-deposit",
+  "title": "TDS deposit due dates",
+  "citation": "Rule 30 Income-tax Rules 1962",
+  "keywords": "tds deposit 7th challan 281 due date march 30 april",
+  "text": "TDS deducted in a month is deposited by the 7th of the following month (30 April for March) using Challan 281.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-200-3",
+  "title": "Quarterly TDS statements",
+  "citation": "Sec 200(3) Income-tax Act; Rule 31A",
+  "keywords": "24q 26q quarterly tds return statement due dates 31 july october january may",
+  "text": "TDS statements are filed quarterly: Form 24Q for salaries and 26Q for other resident payments, due 31 Jul, 31 Oct, 31 Jan and 31 May. Certificates (Form 16A) follow 15 days after the due date; Form 16 by 15 June.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-234e",
+  "title": "Fee for late TDS statements",
+  "citation": "Sec 234E Income-tax Act 1961",
+  "keywords": "234e late fee tds statement 200 per day",
+  "text": "A late TDS statement attracts a fee of ₹200 per day until filed, capped at the TDS amount of the statement.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-288b",
+  "title": "Rounding of tax amounts",
+  "citation": "Sec 288B Income-tax Act 1961",
+  "keywords": "rounding rupee nearest",
+  "text": "TDS amounts are rounded to the nearest rupee; tax payable/refundable by the taxpayer is rounded to the nearest ₹10.",
+  "kind": "provision"
+ },
+ {
+  "id": "cbdt-23-2017",
+  "title": "TDS on invoices with GST shown separately",
+  "citation": "CBDT Circular 23/2017",
+  "keywords": "tds gst component excluded invoice shown separately base",
+  "text": "If GST is shown separately in the invoice, TDS under Chapter XVII-B is deducted on the amount excluding GST. If GST is not separately indicated, TDS applies to the whole amount.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-43b-h",
+  "title": "MSME payments - deduction only on payment",
+  "citation": "Sec 43B(h) Income-tax Act 1961",
+  "keywords": "msme 45 days payment micro small enterprises deduction",
+  "text": "An expense owed to a micro or small enterprise is deductible only in the year it is actually paid if the payment is made after the agreed time (maximum 45 days; 15 days if there is no written agreement). Check whether your vendors are registered MSMEs.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-208-advance",
+  "title": "Advance tax",
+  "citation": "Sec 207-211, 234B, 234C Income-tax Act 1961",
+  "keywords": "advance tax installments 15 june september december march 10000 interest",
+  "text": "Where the year's tax liability is ₹10,000 or more, advance tax is paid by 15 June (15%), 15 Sep (45%), 15 Dec (75%) and 15 Mar (100%). Shortfalls attract interest under Sec 234B and 234C.",
+  "kind": "provision"
+ },
+ {
+  "id": "it-139-itr6",
+  "title": "Income-tax return of a company",
+  "citation": "Sec 139(1) Income-tax Act 1961",
+  "keywords": "itr-6 income tax return company due date 31 october audit",
+  "text": "A company files ITR-6 electronically, due 31 October after the year end (30 November if transfer pricing reports are required). Where a tax audit applies (Sec 44AB), the audit report is due one month earlier, 30 September.",
+  "kind": "provision"
+ },
+ {
+  "id": "ca-96-agm",
+  "title": "Annual General Meeting",
+  "citation": "Sec 96 Companies Act 2013",
+  "keywords": "agm annual general meeting six months 30 september",
+  "text": "A company must hold its AGM within six months of the financial year end (by 30 September for a 31 March year end). Other ROC filing dates are counted from the AGM date.",
+  "kind": "provision"
+ },
+ {
+  "id": "ca-137-aoc4",
+  "title": "Filing financial statements (AOC-4)",
+  "citation": "Sec 137 Companies Act 2013",
+  "keywords": "aoc-4 financial statements roc 30 days agm late fee",
+  "text": "Within 30 days of the AGM the company files its adopted financial statements in Form AOC-4. Delay attracts additional fees of ₹100 per day with no cap.",
+  "kind": "provision"
+ },
+ {
+  "id": "ca-92-mgt7",
+  "title": "Annual return (MGT-7 / MGT-7A)",
+  "citation": "Sec 92 Companies Act 2013",
+  "keywords": "mgt-7 mgt-7a annual return 60 days small company",
+  "text": "The annual return is filed within 60 days of the AGM - Form MGT-7A for small companies and one-person companies, Form MGT-7 for others.",
+  "kind": "provision"
+ },
+ {
+  "id": "ca-139-adt1",
+  "title": "Auditor appointment (ADT-1)",
+  "citation": "Sec 139 Companies Act 2013; Rule 4",
+  "keywords": "adt-1 auditor appointment 15 days",
+  "text": "A company files Form ADT-1 within 15 days of the AGM at which an auditor is appointed or re-appointed.",
+  "kind": "provision"
+ },
+ {
+  "id": "ca-dir3-kyc",
+  "title": "DIR-3 KYC for directors",
+  "citation": "Rule 12A, Companies (Appointment and Qualification of Directors) Rules 2014",
+  "keywords": "dir-3 kyc director din deactivated 30 september",
+  "text": "Every director holding a DIN files DIR-3 KYC by 30 September each year. A missed filing deactivates the DIN until a fee of ₹5,000 is paid.",
+  "kind": "provision"
+ },
+ {
+  "id": "term-rcm",
+  "title": "RCM (reverse charge) - in plain words",
+  "citation": "Glossary",
+  "keywords": "rcm reverse charge meaning plain simple",
+  "text": "Normally the seller charges GST and pays it to the Government. Under reverse charge you, the buyer, work out and pay the GST yourself and then claim it back as input credit. For a foreign SaaS or consulting vendor this happens every month.",
+  "kind": "term"
+ },
+ {
+  "id": "term-lut",
+  "title": "LUT - in plain words",
+  "citation": "Glossary",
+  "keywords": "lut letter undertaking meaning plain simple export",
+  "text": "A yearly declaration on the GST portal that lets you invoice exports without charging IGST. Without a valid LUT you must charge 18% IGST on the export and claim a refund later.",
+  "kind": "term"
+ },
+ {
+  "id": "term-itc",
+  "title": "Input tax credit - in plain words",
+  "citation": "Glossary",
+  "keywords": "itc input credit meaning plain simple set off",
+  "text": "The GST you paid on business purchases that you may subtract from the GST you collect on sales. Only valid if the invoice is genuine, the vendor has filed, and the credit is not blocked.",
+  "kind": "term"
+ },
+ {
+  "id": "term-setoff",
+  "title": "Set-off in GSTR-3B - in plain words",
+  "citation": "Glossary",
+  "keywords": "set off offset liability credit ledger cash ledger plain simple",
+  "text": "Your GST liability is first reduced by available input credit following a fixed order (IGST credit first); what is left is paid in cash. RCM tax is always paid in cash.",
+  "kind": "term"
+ },
+ {
+  "id": "term-tan",
+  "title": "TAN",
+  "citation": "Glossary",
+  "keywords": "tan tax deduction account number",
+  "text": "Tax Deduction and Collection Account Number - a 10-character number every deductor needs to quote in TDS challans and returns.",
+  "kind": "term"
+ },
+ {
+  "id": "term-dsc-evc",
+  "title": "DSC and EVC",
+  "citation": "Glossary",
+  "keywords": "dsc evc digital signature electronic verification code filing authentication portal",
+  "text": "Returns on the GST/income-tax portals are authenticated with a Digital Signature Certificate (mandatory for companies on GST) or an Electronic Verification Code sent to the registered mobile/email (where permitted).",
+  "kind": "term"
+ },
+ {
+  "id": "term-pos",
+  "title": "Place of supply",
+  "citation": "Glossary",
+  "keywords": "place of supply pos state intra inter igst cgst sgst",
+  "text": "The state or territory where a supply is taxed. If the supplier's state and the place of supply are the same, CGST+SGST apply; if different, IGST applies.",
+  "kind": "term"
+ },
+ {
+  "id": "term-b2b-b2c",
+  "title": "B2B, B2CL, B2CS",
+  "citation": "Glossary",
+  "keywords": "b2b b2c b2cl b2cs unregistered registered customers",
+  "text": "B2B means sales to GST-registered businesses (invoice-wise reporting). B2C means sales to unregistered customers: large inter-state invoices are reported individually (B2CL); everything else is summarised by state and rate (B2CS).",
+  "kind": "term"
+ },
+ {
+  "id": "acc-confirm",
+  "title": "Why Account0 asks you to confirm tax treatment",
+  "citation": "Account0 design",
+  "keywords": "confirm tax treatment never guess llm extraction why",
+  "text": "Account0 reads documents with AI but never decides tax treatment. Supply type, reverse charge, GST rate and ITC eligibility are always confirmed by you (or by a rule you created from an earlier confirmation) because they determine tax and penalties. All tax figures are then computed by plain deterministic code.",
+  "kind": "concept"
+ },
+ {
+  "id": "acc-lock",
+  "title": "Why filed months are locked",
+  "citation": "Account0 design",
+  "keywords": "lock period filed edit unlock audit",
+  "text": "Once a return is filed, the figures have been reported to the Government. Locking the month stops silent edits that would make your books disagree with the filed return; unlocking requires a reason that is kept in the audit trail.",
+  "kind": "concept"
+ }
+]
