@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { api, jsonBody } from "@/lib/api";
 
 const statusClass = (s: string) => (s === "CONFIRMED" ? "ok" : s === "FAILED" || s === "REJECTED" ? "bad" : s === "NEEDS_REVIEW" || s === "DUPLICATE" ? "warn" : "");
 
@@ -54,7 +54,19 @@ export default function Inbox() {
           <b>Other sources</b>
           <p>Watched folder: <code>{sources.watchedFolder}</code> — files dropped there are imported every ~10 s.{" "}
             <button className="secondary" onClick={async () => { await api("/api/sources/folder/scan", { method: "POST" }); load(); }}>Scan now</button></p>
-          {sources.external.map((s: any) => <div key={s.name} className="stub">{s.message}</div>)}
+          {sources.external.map((s: any) => (
+            <div key={s.name} className={s.connected ? "card" : "stub"}>
+              <b>{s.name}</b> <span className="muted">{s.target}</span>
+              <div>{s.message}</div>
+              <div className="muted">Last sync: {s.lastSync}</div>
+              <div className="row" style={{ marginTop: 6 }}>
+                {s.configured && !s.connected && <button onClick={async () => { try { const r = await api("/api/google/auth-url"); window.location.href = r.url; } catch (e: any) { setErr(e.message); } }}>Connect Google (read-only)</button>}
+                {s.connected && <button className="secondary" onClick={async () => { try { const r = await api(`/api/google/sync/${s.name === "Gmail" ? "gmail" : "drive"}`, { method: "POST" }); setErr(`Imported ${r.imported} new file(s).`); load(); api("/api/sources").then(setSources); } catch (e: any) { setErr(e.message); } }}>Sync now</button>}
+                {s.connected && s.name === "Gmail" && <button className="secondary" onClick={async () => { const l = prompt("Gmail label to watch (e.g. Account0/Invoices)?"); if (l) { await api("/api/google/config", jsonBody("PUT", { gmail_label: l })); api("/api/sources").then(setSources); } }}>Change label</button>}
+                {s.connected && s.name !== "Gmail" && <button className="secondary" onClick={async () => { const f = prompt("Drive folder id (the last part of the folder URL)?"); if (f !== null) { await api("/api/google/config", jsonBody("PUT", { drive_folder_id: f })); api("/api/sources").then(setSources); } }}>Set folder</button>}
+                {s.connected && s.name === "Gmail" && <button className="secondary" onClick={async () => { await api("/api/google/disconnect", { method: "POST" }); api("/api/sources").then(setSources); }}>Disconnect Google</button>}
+              </div>
+            </div>))}
         </div>
       )}
       <h2>Documents</h2>

@@ -18,6 +18,13 @@ account0:
   data-dir: ${ACCOUNT0_DATA_DIR:../data}
   inbox-dir: ${ACCOUNT0_INBOX_DIR:../data/inbox}
   inbox-poll-ms: 10000
+  secret-key: ${ACCOUNT0_SECRET_KEY:}
+  google:
+    client-id: ${ACCOUNT0_GOOGLE_CLIENT_ID:}
+    client-secret: ${ACCOUNT0_GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${ACCOUNT0_GOOGLE_REDIRECT_URI:http://127.0.0.1:8710/api/google/callback}
+    ui-return-url: ${ACCOUNT0_UI_URL:http://127.0.0.1:3710}/inbox
+    sync-ms: 600000
   llm:
     base-url: ${ACCOUNT0_ANTHROPIC_BASE_URL:https://api.anthropic.com}
     api-key: ${ACCOUNT0_ANTHROPIC_API_KEY:}

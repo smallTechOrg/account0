@@ -26,8 +26,12 @@ Data lives in `data/` (SQLite `data/account0.db`, documents, watched inbox `data
 ./scripts/gate-p5.sh   # + bank statement import & reconciliation
 ./scripts/gate-p6.sh   # + compliance calendar & month-close checklist
 ./scripts/gate-p7.sh   # + learning layer (real grounded Q&A, walkthroughs, DIY coaching)
+./scripts/gate-p8.sh   # + Google Gmail/Drive (unconnected; OAuth flow tested with a mock)
 ```
 Backend tests only: `cd backend && ./gradlew test`. Frontend: `cd frontend && npm test && npx next build`.
 
 ## Docs
 `spec/capabilities.md`, `spec/architecture.md`, `spec/agent.md`, `spec/roadmap.md`, `NOTES.md` (build journal).
+
+## Gmail / Google Drive (optional)
+Add `ACCOUNT0_GOOGLE_CLIENT_ID` / `ACCOUNT0_GOOGLE_CLIENT_SECRET` to `.env` (see `.env.example`), restart, then Inbox -> "Connect Google (read-only)". Built and tested against a mock only.

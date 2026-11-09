@@ -3,8 +3,8 @@ package com.account0.documents;
 import java.util.Map;
 
 /**
- * A remote place invoices arrive (Gmail label, Drive folder). P8 implements these behind Google OAuth.
- * Until then the implementations are STUBS that report "not connected" and import nothing.
+ * A remote place invoices arrive (Gmail label, Drive folder). Implemented in com.account0.google behind Google OAuth (read-only scopes);
+ * until credentials are added and an account is connected they report "not connected" (shown as a STUB in the UI) and import nothing.
  */
 public interface ExternalSource {
     String name();

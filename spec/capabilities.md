@@ -15,7 +15,7 @@ Validation: GSTIN format + check digit; PAN = GSTIN chars 3–12; state code = G
 ## C2 Invoice inbox + extraction [built P1]
 - Upload one or many PDF/PNG/JPG invoices (a batch), with a progress bar for the batch.
 - Watched local folder (`data/inbox/`) is polled; new files are imported automatically.
-- Gmail / Google Drive sources: interface only, **[stub]** until P8 (user sets up OAuth).
+- Gmail / Google Drive sources: **[built P8, unconnected until you add Google credentials; only tested against a mock]**.
 - Duplicate detection by file SHA-256 and by (counterparty GSTIN, invoice no).
 - Claude extracts, in ONE call per document: supplier/recipient name+GSTIN+country, invoice no/date,
   currency, line items (description, HSN/SAC, taxable value, rate, CGST/SGST/IGST/cess), totals,
@@ -88,3 +88,6 @@ Every call logged with model, purpose, tokens and USD cost; monthly running tota
 - Assumed (P5): auto-match only if score >= 85 and the runner-up is >= 15 points lower; receipts up to 12% below the invoice are scored as "possibly net of TDS/charges" and only suggested unless invoice number + name both appear. Statement dates are day-first (Indian banks).
 - Assumed (P6): calendar = obligations whose DUE DATE falls in the FY (so it carries last year's ROC/ITR/GSTR-9 filings); default AGM 30 Sep (editable via setting `company.agm_date`, moves ADT-1/AOC-4/MGT-7A); statutory un-extended dates for a monthly GST filer; PF/ESI/24Q/Form 16 only when payroll exists or `company.has_employees=true`; advance tax, ADT-1, DPT-3, GSTR-9, tax audit are "if applicable" (no alerts). Alerts: overdue (<=45 days back) HIGH, due within 7 days MEDIUM/LOW. Professional tax (state-specific) is not covered.
 - Assumed (P7): the reference corpus (`backend/src/main/resources/corpus/corpus.json`, 57 entries) is my own paraphrase of provisions as understood for FY 2025-26 — NOT verified legal text; the UI says so. Q&A: deterministic retrieval; if nothing relevant, decline with no LLM call; otherwise ONE Sonnet call, citations validated against the retrieved ids (unknown ids stripped; uncited answers flagged "ungrounded"). Simplification vs. spec/agent.md: no tool loop - period/invoice facts are attached by code instead. DIY "readiness" = months where the user's recompute equalled the CA's confirmed filed 3B (needs >= 3 compared months).
+
+## C15 Google sources [built P8, mock-tested only]
+Read-only OAuth (PKCE, single-use state; scopes gmail.readonly + drive.readonly + userinfo.email) -> Gmail label poller and Drive folder poller feeding the normal inbox pipeline. Tokens are AES-GCM encrypted at rest (key from ACCOUNT0_SECRET_KEY or a random `data/.secret-key`), never returned by any API; disconnect revokes and deletes. Without ACCOUNT0_GOOGLE_CLIENT_ID/SECRET the UI shows the STUB box with setup steps. Assumed: the raw-HTTP Gmail v1 / Drive v3 calls are written from API docs and have NOT been run against live Google. De-dup: external id (+ md5 for Drive) and file SHA-256. Polls every 10 min when connected.
