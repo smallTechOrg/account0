@@ -10,10 +10,20 @@ Run start: 2026-11-10 03:47 (autonomous overnight build, branch feature/account0
 - 04:25 P2: 3B set-off implemented per Sec 49/49A + Rule 88A (IGST credit first → IGST, CGST, SGST). Assumed: 17(5)-blocked ITC is reported in 4A then reversed in 4B(1) per Circular 170/02/2022. GSTR-1 JSON shape is best-effort (offline tool); flagged in UI.
 - 04:25 Next.js rewrites are resolved at build time, so the gate's UI smoke test only checks pages render (200), not proxying to the gate's alternate backend port.
 
-## HANDOFF (04:35, model switch)
-- Done & gated: P0, P1, P2 (commits phase-0/1/2; gates gate-p0/p1/p2 all GREEN — P1 incl. real extraction of 4 fixtures, ~$0.08).
-- Half-done P3 (wip commit, NOT compiling yet, no gate):
-  - `V3__scrutiny_itc.sql` (filed_return, gstr2b_import, gstr2b_doc) written.
-  - `scrutiny/` Gstr3bFigures, ScrutinyEngine, ScrutinyService, ScrutinyController written.
-  - COMPILE BREAK: ScrutinyService.importPdf calls `docs.ingestReference(bytes, filename)` which does not exist in DocumentService — add it (store file with source='REFERENCE', status='REFERENCE', no extraction event).
-- Next exact steps: add ingestReference; `itc/` 2B JSON import + matcher (ctin + normalised inv no, amount tol ₹1; statuses MATCHED/AMOUNT_MISMATCH/IN_2B_NOT_IN_BOOKS/IN_BOOKS_NOT_IN_2B); `alerts/` live alerts endpoint; frontend /scrutiny, /itc pages + dashboard alerts + nav links; JUnit for ScrutinyEngine; scripts/gate-p3.sh; commit `phase-3: ...`; update PR #1 body.
+- 04:15 P3 compile fix: added DocumentService.ingestReference (source/status REFERENCE, never queued for extraction). Gate P3 green first try incl. real Claude transcription of a generated filed-3B PDF.
+- 04:35 P4: first payroll test caught my own off-by-one (months remaining from April is 12, not 11) - good reason to keep hand-computed expectations in tests.
+- 04:50 macOS `sed -i`/`;`-chained substitutions repeatedly failed ("unescaped newline"); used small python3 edit scripts instead.
+- 05:05 P7 retrieval: plural stemming made "good" match "goods" (194Q) so an off-topic question reached the LLM; fixed with a query-coverage rule (>=2 of >=3 typed words must hit). Off-topic now declines with zero LLM spend (asserted in gate-p7).
+- 05:20 P8: no Google credentials exist, so the Gmail/Drive HTTP transport is UNVERIFIED against live Google; OAuth flow, token encryption, dedupe, refresh and disconnect are tested against an in-memory fake.
+- Gate cost for a full re-run of gates 0-8 is roughly $0.15 (P1 extraction of 4 invoices dominates; P3 one PDF transcription; P7 two Q&A calls).
+
+## HANDOFF (final, all phases built)
+- Done and gated GREEN (last full run, fresh DB each): P0, P1, P2, P3, P4, P5, P6, P7, P8. Run `./scripts/gate-pN.sh` (SKIP_UNIT=1 skips tests/build).
+- Run: `./run.sh` -> UI http://127.0.0.1:3710, API http://127.0.0.1:8710. Flyway migrations V1..V8.
+- Nothing half-done. Known gaps / ideas for next session:
+  1. No journal posting for bank payments, TDS payable, or salary (ledger only has invoice postings).
+  2. Gmail/Drive transport never run against live Google; needs a real OAuth client to verify (see README).
+  3. Tax assumptions are listed as `Assumed:` lines at the bottom of spec/capabilities.md (TDS rates/thresholds, new-regime slabs for later years, calendar dates, corpus paraphrases). Have the CA review them.
+  4. Sec 195 (non-resident TDS), old-regime salary, surcharge >50L, professional tax, QRMP filers are deliberately not computed (flagged to ask CA).
+  5. GSTR-1 JSON is best-effort portal shape - validate in the offline tool (from P2).
+  6. Frontend has no automated browser tests; gates only check pages render (200) and the API.
