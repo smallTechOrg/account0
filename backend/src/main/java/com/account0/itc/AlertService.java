@@ -11,8 +11,8 @@ import java.util.*;
 public class AlertService {
     private final JdbcTemplate jdbc;
     private final ItcService itc;
-    private final com.account0.tds.TdsService tds; private final com.account0.payroll.PayrollService payroll;
-    public AlertService(JdbcTemplate jdbc, ItcService itc, com.account0.tds.TdsService tds, com.account0.payroll.PayrollService payroll) { this.jdbc = jdbc; this.itc = itc; this.tds = tds; this.payroll = payroll; }
+    private final com.account0.bank.BankService bank; private final com.account0.tds.TdsService tds; private final com.account0.payroll.PayrollService payroll;
+    public AlertService(JdbcTemplate jdbc, ItcService itc, com.account0.tds.TdsService tds, com.account0.payroll.PayrollService payroll, com.account0.bank.BankService bank) { this.bank = bank; this.jdbc = jdbc; this.itc = itc; this.tds = tds; this.payroll = payroll; }
 
     static String rs(long p) { return "₹" + String.format(Locale.ROOT, "%,.2f", p / 100.0); }
     private Map<String, Object> a(String code, String sev, String period, String msg, String why, Object... refs) {
@@ -80,7 +80,7 @@ public class AlertService {
                 } catch (Exception ignored) {}
             }
         }
-        out.addAll(tds.alerts()); out.addAll(payroll.alerts());
+        out.addAll(tds.alerts()); out.addAll(payroll.alerts()); out.addAll(bank.alerts());
         Map<String, Integer> sev = Map.of("HIGH", 0, "MEDIUM", 1, "LOW", 2);
         out.sort(Comparator.comparing((Map<String, Object> m) -> sev.get(m.get("severity"))).thenComparing(m -> String.valueOf(m.get("period"))));
         return out;

@@ -56,7 +56,8 @@ Import 2B JSON; match purchase invoices; alerts: vendor not filed / ITC at risk,
 ## C9 TDS + payroll [built P4]
 194C/194J/194I/194H/194Q + 192 salary; thresholds; 26Q/24Q data; payroll import (CSV).
 
-## C10 Bank statement import + reconciliation [planned P5]
+## C10 Bank statement import + reconciliation [built P5]
+CSV/XLSX import with auto-detected (overridable) column mapping, idempotent re-import, running-balance continuity check, scored matching to confirmed invoices (amount, date window, invoice no, vendor name; receipts net of TDS recognised), unambiguous strong matches auto-applied, the rest suggested; manual match/unmatch/ignore-with-reason; outstanding receivables/payables with ageing; alerts. No journal posting of payments yet (deferred).
 
 ## C11 Compliance calendar + month-close checklist [planned P6]
 GST, TDS, PF/ESI, ROC (AOC-4, MGT-7/7A, DIR-3 KYC, ADT-1), advance tax, ITR-6 — with status.
@@ -84,3 +85,4 @@ Every call logged with model, purpose, tokens and USD cost; monthly running tota
 - Assumed: LLM pricing per Anthropic list (cached 2026-11-03): Sonnet 5.5 $2/$10, Haiku 5.5 $0.10/$0.50 per MTok.
 - Assumed (P3): filed-3B comparison tolerance ₹1 per figure; the latest *confirmed* filed 3B for a period is the one used by alerts. PDF transcription is never trusted until the user confirms it. 2B matching key = vendor GSTIN + normalised invoice number (upper-case, punctuation/leading zeros stripped); fuzzy fallback = same GSTIN + same tax (±₹1) + similar number (flagged POSSIBLE_MATCH, never auto-accepted). RCM purchases are excluded from 2B matching (they do not appear in 2B ITC).
 - Assumed (P4): TDS base = invoice value excluding GST (CBDT Circular 23/2017); TDS timing = invoice date (credit). Rates/thresholds for 194C/194J/194I/194H/194Q as for FY 2025-26 onwards; Income-tax Act 1961 section numbers used (Income-tax Act 2025 renumbers — confirm with CA). Payee PAN defaults from vendor GSTIN; payee type from PAN 4th letter (P/H = individual/HUF) unless the user overrides. No PAN -> 20% (Sec 206AA). Sec 195 (non-resident) never computed. Salary: new regime FY 2025-26 slabs applied to later years; std deduction 75,000; 87A rebate with marginal relief; 4% cess; surcharge/old regime -> flagged for CA. TDS rounded to the nearest rupee.
+- Assumed (P5): auto-match only if score >= 85 and the runner-up is >= 15 points lower; receipts up to 12% below the invoice are scored as "possibly net of TDS/charges" and only suggested unless invoice number + name both appear. Statement dates are day-first (Indian banks).

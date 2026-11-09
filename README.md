@@ -23,6 +23,7 @@ Data lives in `data/` (SQLite `data/account0.db`, documents, watched inbox `data
 ./scripts/gate-p2.sh   # + GSTR-3B/GSTR-1 recompute, exports, CA pack
 ./scripts/gate-p3.sh   # + CA scrutiny (real PDF transcription), 2B ITC match, alerts
 ./scripts/gate-p4.sh   # + TDS register/26Q, payroll Sec 192/24Q
+./scripts/gate-p5.sh   # + bank statement import & reconciliation
 ```
 Backend tests only: `cd backend && ./gradlew test`. Frontend: `cd frontend && npm test && npx next build`.
 
