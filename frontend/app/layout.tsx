@@ -6,7 +6,7 @@ export const metadata = { title: "Account0", description: "Local-first back-offi
 const NAV: [string, [string, string][]][] = [
   ["Overview", [["/", "Dashboard"], ["/company", "Company profile"], ["/settings", "Settings"]]],
   ["Books", [["/inbox", "Invoice inbox"], ["/review", "Review queue"], ["/invoices", "Invoices"], ["/ledger", "Ledger"], ["/rules", "Vendor/customer rules"]]],
-  ["GST", [["/gst", "GSTR-3B / GSTR-1"], ["/filings", "Filing history"]]],
+  ["GST", [["/gst", "GSTR-3B / GSTR-1"], ["/filings", "Filing history"], ["/scrutiny", "CA scrutiny"], ["/itc", "GSTR-2B / ITC match"]]],
   ["System", [["/usage", "LLM spend"], ["/audit", "Audit trail"]]],
 ];
 

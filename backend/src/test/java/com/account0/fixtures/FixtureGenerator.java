@@ -33,6 +33,8 @@ public class FixtureGenerator {
         exportLut(dir.resolve("02-export-lut-northwind.pdf"));
         purchaseDomestic(dir.resolve("03-purchase-nimbus-hosting.pdf"));
         foreignVendor(dir.resolve("04-foreign-atlas-analytics.pdf"));
+        Path ret = dir.resolveSibling("returns"); Files.createDirectories(ret);
+        filed3b(ret.resolve("gstr3b-2026-10-filed.pdf"));
         Files.writeString(dir.resolve("expected.json"), """
                 {
                   "company": {"legal_name": "%s", "gstin": "%s", "cin": "U72900KA2021PTC145678", "tan": "BLRA12345B"},
@@ -93,6 +95,29 @@ public class FixtureGenerator {
         d.gap();
         d.kv("Taxable Value:", "50,000.00"); d.kv("IGST @ 18%:", "9,000.00"); d.kv("Grand Total (INR):", "59,000.00");
         d.left("Rupees Fifty Nine Thousand Only"); d.save(out);
+    }
+
+    /** A CA-filed GSTR-3B for Oct 2026 that deliberately omits the RCM liability and its ITC (everything else agrees with the 4 fixture invoices). */
+    static void filed3b(Path out) throws Exception {
+        Doc d = new Doc();
+        d.title("FORM GSTR-3B");
+        d.kv("GSTIN:", OUR_GSTIN); d.kv("Legal name:", OUR_NAME); d.kv("Year / Period:", "2026-27 / October 2026"); d.kv("ARN:", "AA2910260012345"); d.gap();
+        d.left("3.1 Details of outward supplies and inward supplies liable to reverse charge (Amount in Rs.)", true);
+        d.table(new String[]{"Nature of supplies", "Taxable value", "Integrated tax", "Central tax", "State/UT tax", "Cess"},
+                new String[][]{{"(a) Outward taxable supplies", "120000.00", "0.00", "10800.00", "10800.00", "0.00"},
+                        {"(b) Outward taxable supplies (zero rated)", "336000.00", "0.00", "0.00", "0.00", "0.00"},
+                        {"(c) Other outward supplies (nil, exempted)", "0.00", "0.00", "0.00", "0.00", "0.00"},
+                        {"(d) Inward supplies (liable to reverse charge)", "0.00", "0.00", "0.00", "0.00", "0.00"},
+                        {"(e) Non-GST outward supplies", "0.00", "0.00", "0.00", "0.00", "0.00"}});
+        d.gap(); d.left("4. Eligible ITC (Amount in Rs.)", true);
+        d.table(new String[]{"Details", "Integrated tax", "Central tax", "State/UT tax", "Cess"},
+                new String[][]{{"(A)(1) Import of goods", "0.00", "0.00", "0.00", "0.00"},
+                        {"(A)(2) Import of services", "0.00", "0.00", "0.00", "0.00"},
+                        {"(A)(3) Inward supplies liable to reverse charge", "0.00", "0.00", "0.00", "0.00"},
+                        {"(A)(5) All other ITC", "9000.00", "0.00", "0.00", "0.00"},
+                        {"(B)(1) ITC reversed - Rules 38, 42, 43 and 17(5)", "0.00", "0.00", "0.00", "0.00"},
+                        {"(C) Net ITC available (A-B)", "9000.00", "0.00", "0.00", "0.00"}});
+        d.save(out);
     }
 
     static void foreignVendor(Path out) throws Exception {

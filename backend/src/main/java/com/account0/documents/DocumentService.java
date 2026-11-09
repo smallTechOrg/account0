@@ -80,6 +80,30 @@ public class DocumentService {
         }
     }
 
+    /** Stores a reference document (e.g. a filed return PDF): source/status REFERENCE, never queued for invoice extraction. */
+    public Map<String, Object> ingestReference(byte[] bytes, String filename) {
+        String mime = mimeFor(filename, null);
+        if (!ALLOWED.contains(mime)) throw ApiException.bad("Unsupported file type " + mime);
+        if (bytes.length == 0) throw ApiException.bad("Empty file " + filename);
+        String sha = sha256(bytes);
+        try {
+            Files.createDirectories(docDir);
+            String ext = mime.equals("application/pdf") ? ".pdf" : "." + mime.substring(6);
+            Path p = docDir.resolve(sha + ext);
+            if (!Files.exists(p)) Files.write(p, bytes);
+            GeneratedKeyHolder kh = new GeneratedKeyHolder();
+            jdbc.update(c -> {
+                PreparedStatement ps = c.prepareStatement("INSERT INTO document(tenant_id,filename,mime,sha256,stored_path,size_bytes,source,status) VALUES (?,?,?,?,?,?,'REFERENCE','REFERENCE')", Statement.RETURN_GENERATED_KEYS);
+                ps.setLong(1, Tenant.current()); ps.setString(2, filename); ps.setString(3, mime); ps.setString(4, sha); ps.setString(5, p.toString()); ps.setLong(6, bytes.length);
+                return ps; }, kh);
+            long id = kh.getKey().longValue();
+            audit.record("user", "document", id, "ingest", null, null, filename, "REFERENCE");
+            return get(id);
+        } catch (java.io.IOException e) {
+            throw new ApiException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, "Could not store file: " + e.getMessage());
+        }
+    }
+
     public Map<String, Object> get(long id) {
         List<Map<String, Object>> r = jdbc.queryForList("""
                 SELECT d.id, d.batch_id, d.filename, d.mime, d.sha256, d.size_bytes, d.source, d.status, d.error, d.duplicate_of, d.created_at,
