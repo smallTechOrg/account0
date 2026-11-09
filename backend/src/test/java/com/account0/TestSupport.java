@@ -17,6 +17,12 @@ import java.util.function.Function;
 public final class TestSupport {
     private TestSupport() {}
 
+    public static java.util.Map<String, Object> map(Object... kv) {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
+        return m;
+    }
+
     public static void freshDb(DynamicPropertyRegistry r) {
         try {
             Path dir = Files.createTempDirectory("account0-test");

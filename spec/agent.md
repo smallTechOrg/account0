@@ -24,13 +24,13 @@ Principle: **the LLM reads and explains; code computes and decides; the user con
 - Model returns `confidence` ∈ [0,1] per field. Deterministic checks can only *lower* it (e.g. GSTIN checksum
   fail → 0.2, totals mismatch → flag on totals).
 - Field < 0.85 or failed check → highlighted in review; invoice cannot be confirmed until the user has
-  touched/acknowledged the flagged fields (acknowledge = save the form, which records `reviewed_fields`).
+  touched/acknowledged the flagged fields (acknowledge = the explicit "I have checked the highlighted fields" tick, recorded in the audit note on confirm).
 - Tax-treatment fields are always unconfirmed on a new invoice regardless of confidence.
 - Nothing extracted ever reaches the ledger or GST computation until status = CONFIRMED.
 
 ## Tool use
 Extraction is a single structured-output style call (JSON in the text response, validated & parsed in Java;
-one retry with the parse error if JSON is invalid). No agent loop — task is fully specified. Future Q&A (P7)
+if the JSON is invalid the document is marked FAILED with the reason and the user can click Retry — no silent automatic re-spend). No agent loop — task is fully specified. Future Q&A (P7)
 may use client tools (`lookup_invoice`, `get_3b_figure`, `search_law_corpus`) through a manual loop bounded
 to 4 turns, still through `LlmGateway` so spend is capped.
 
