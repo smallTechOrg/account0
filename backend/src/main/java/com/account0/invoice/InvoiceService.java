@@ -87,7 +87,7 @@ public class InvoiceService {
             Map<String, Object> ln = new LinkedHashMap<>();
             for (String f : LINE_FIELDS) ln.put(f, raw.get(f));
             jdbc.update("INSERT INTO invoice_line(tenant_id, invoice_id, line_no, description, hsn_sac, uqc, quantity, gst_rate, taxable_paise, cgst_paise, sgst_paise, igst_paise, cess_paise) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    Tenant.current(), id, n++, ln.get("description"), ln.get("hsn_sac"), ln.get("uqc"), str(ln.get("quantity")), str(ln.get("gst_rate")),
+                    Tenant.current(), id, n++, ln.get("description"), ln.get("hsn_sac"), ln.get("uqc"), str(ln.get("quantity")), InvoiceChecks.cleanRate(str(ln.get("gst_rate"))),
                     n0(ln.get("taxable_paise")), n0(ln.get("cgst_paise")), n0(ln.get("sgst_paise")), n0(ln.get("igst_paise")), n0(ln.get("cess_paise")));
         }
     }
@@ -236,6 +236,21 @@ public class InvoiceService {
         audit.record("user", "invoice", id, "reopen", "status", "CONFIRMED", "DRAFT", "ledger entries reversed (deleted)");
         posting.syncAll();
         if (inv.get("document_id") != null) jdbc.update("UPDATE document SET status='NEEDS_REVIEW' WHERE id=?", inv.get("document_id"));
+        return get(id);
+    }
+
+    /** A sales document that was issued and then cancelled: leaves every return figure and the ledger, but is counted in GSTR-1 Table 13 ("cancelled"). */
+    @Transactional
+    public Map<String, Object> cancel(long id, String reason) {
+        Map<String, Object> inv = get(id);
+        locks.assertOpen((String) inv.get("period"));
+        if (!"CONFIRMED".equals(inv.get("status")) || !"SALE".equals(inv.get("direction")))
+            throw ApiException.bad("Only a confirmed sales document can be marked as cancelled.");
+        if (reason == null || reason.isBlank()) throw ApiException.bad("Say why the document was cancelled.");
+        ledger.unpost("invoice", id);
+        jdbc.update("UPDATE invoice SET status='CANCELLED' WHERE id=?", id);
+        audit.record("user", "invoice", id, "cancel", "status", "CONFIRMED", "CANCELLED", reason);
+        posting.syncAll();
         return get(id);
     }
 

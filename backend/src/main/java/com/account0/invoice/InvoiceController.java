@@ -37,6 +37,9 @@ public class InvoiceController {
         return svc.confirm(id, Boolean.TRUE.equals(b.get("saveRule")), Boolean.TRUE.equals(b.get("acknowledgeWarnings")));
     }
     @PostMapping("/invoices/{id}/reopen") public Map<String, Object> reopen(@PathVariable long id) { return svc.reopen(id); }
+    @PostMapping("/invoices/{id}/cancel") public Map<String, Object> cancel(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        return svc.cancel(id, body == null ? null : (String) body.get("reason"));
+    }
     @PostMapping("/invoices/{id}/reject") public Map<String, Object> reject(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         return svc.reject(id, body == null ? null : (String) body.get("reason"));
     }

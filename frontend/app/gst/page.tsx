@@ -96,7 +96,7 @@ export default function Gst() {
               <h2>Table 12 — HSN summary (B2B)</h2><Hsn rows={g1.hsnB2b} />
               <h2>Table 12 — HSN summary (B2C)</h2><Hsn rows={g1.hsnB2c} />
               <h2>Table 13 — Documents issued</h2>
-              <p>{g1.documentsIssued.count} documents, {g1.documentsIssued.from} … {g1.documentsIssued.to}. <span className="muted">{g1.documentsIssued.rule}</span></p>
+              <p>{g1.documentsIssued.count} documents issued ({g1.documentsIssued.cancelled} cancelled, {g1.documentsIssued.netIssued} net), {g1.documentsIssued.from} … {g1.documentsIssued.to}. <span className="muted">{g1.documentsIssued.rule}</span></p>
               {g1.notes.map((n: string, i: number) => <div key={i} className="stub">{n}</div>)}
               <div className="assumed">The JSON follows the GST offline tool’s shape on a best-effort basis — import it into the offline tool to validate before uploading to the portal.</div>
             </>

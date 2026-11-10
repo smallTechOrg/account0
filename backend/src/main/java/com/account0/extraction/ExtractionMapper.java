@@ -89,7 +89,7 @@ public final class ExtractionMapper {
             m.put("hsn_sac", text(ln.get("hsn_sac")));
             m.put("quantity", text(ln.get("quantity")));
             String rate = text(ln.get("gst_rate"));
-            m.put("gst_rate", rate == null ? null : rate.replace("%", "").trim());
+            m.put("gst_rate", com.account0.invoice.InvoiceChecks.cleanRate(rate));
             if (foreign) { m.put("taxable_paise", lines.isEmpty() && j.path("lines").size() == 1 ? nz(taxable) : 0L); m.put("cgst_paise", 0L); m.put("sgst_paise", 0L); m.put("igst_paise", 0L); }
             else {
                 m.put("taxable_paise", nz(paise(text(ln.get("taxable_value"))))); m.put("cgst_paise", nz(paise(text(ln.get("cgst")))));

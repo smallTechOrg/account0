@@ -17,13 +17,19 @@ Run start: 2026-11-10 03:47 (autonomous overnight build, branch feature/account0
 - 05:20 P8: no Google credentials exist, so the Gmail/Drive HTTP transport is UNVERIFIED against live Google; OAuth flow, token encryption, dedupe, refresh and disconnect are tested against an in-memory fake.
 - Gate cost for a full re-run of gates 0-8 is roughly $0.15 (P1 extraction of 4 invoices dominates; P3 one PDF transcription; P7 two Q&A calls).
 
-## HANDOFF (final, all phases built)
-- Done and gated GREEN (last full run, fresh DB each): P0, P1, P2, P3, P4, P5, P6, P7, P8. Run `./scripts/gate-pN.sh` (SKIP_UNIT=1 skips tests/build).
-- Run: `./run.sh` -> UI http://127.0.0.1:3710, API http://127.0.0.1:8710. Flyway migrations V1..V8.
-- Nothing half-done. Known gaps / ideas for next session:
-  1. No journal posting for bank payments, TDS payable, or salary (ledger only has invoice postings).
-  2. Gmail/Drive transport never run against live Google; needs a real OAuth client to verify (see README).
-  3. Tax assumptions are listed as `Assumed:` lines at the bottom of spec/capabilities.md (TDS rates/thresholds, new-regime slabs for later years, calendar dates, corpus paraphrases). Have the CA review them.
-  4. Sec 195 (non-resident TDS), old-regime salary, surcharge >50L, professional tax, QRMP filers are deliberately not computed (flagged to ask CA).
-  5. GSTR-1 JSON is best-effort portal shape - validate in the offline tool (from P2).
-  6. Frontend has no automated browser tests; gates only check pages render (200) and the API.
+- P9 (08:2x): first browser run of the real UI found no app bugs (my selectors only: "Review" matched the sidebar link, "Tax treatment" matched a flag). One real bug found by reading the UI while adding postings: the Ledger journal always linked `/review/<ref_id>` — wrong for bank/TDS/payroll journals; now links by ref type.
+- P9: `next build` rewrites are fixed at build time, so the gates now build the UI into `.next-gate` with `ACCOUNT0_BACKEND_URL` = the gate backend; this also means a gate run never overwrites the `.next` of a running `./run.sh` UI. Real UI->API proxy is therefore tested end to end.
+- P9: extraction is stubbed in the UI gate by env `ACCOUNT0_LLM_STUB_FIXTURE` (a `@Primary` transport returning a fixed JSON). Gate P9 spends no tokens; gates P1/P3/P7 still spend (~$0.15 total for 0-9).
+- Cosmetic: macOS `sed -i` again needed `''`; python edit scripts used instead.
+
+## HANDOFF (final, phases 0-9 built)
+- Done and gated GREEN (see git log / PR for last run): P0-P9. Run `./scripts/gate-pN.sh` (SKIP_UNIT=1 skips tests/build).
+- Run: `./run.sh` -> UI http://127.0.0.1:3710, API http://127.0.0.1:8710. Flyway migrations V1..V9. After pulling this phase RESTART the backend (new V9 migration) and rebuild the UI (`cd frontend && npx next build`).
+- P9 added: PostingService journals (bank receipts/payments incl. customer net-of-TDS, TDS deduct/deposit, payroll), Playwright UI gate (`frontend/e2e/ui.mjs`), UI polish (Indian grouping, month/FY pickers, empty states, error toasts, STUB/ASSUMED labels), GSTR-1 CDNUR for export notes, cancelled-document tracking (Table 13), QRMP warning, old-regime flag in payroll UI.
+- Known gaps / ideas for next session:
+  1. Gmail/Drive transport never run against live Google; needs a real OAuth client to verify (see README).
+  2. Tax assumptions are the `Assumed:` lines at the bottom of spec/capabilities.md (TDS rates/thresholds, new-regime slabs for later years, calendar dates, corpus paraphrases, P9 posting conventions). Have the CA review them.
+  3. Sec 195 (non-resident TDS), old-regime salary, surcharge >50L, professional tax are deliberately not computed (flagged to ask CA). QRMP only warns.
+  4. GSTR-1 JSON (incl. cdnur, doc_issue cancel) is best-effort portal shape - validate in the offline tool.
+  5. Bank: unmatched/ignored lines are not posted; salary payments and TDS challans are not tied to bank lines (challans credit "Bank / cash (challan payments)"). Re-assigning a TDS section recreates the entry and clears its deposit details (pre-existing behaviour).
+  6. UI e2e covers one happy path (profile -> upload -> review/confirm -> GST explain -> ledger, error toast, empty state); other screens are only smoke-tested for HTTP 200.

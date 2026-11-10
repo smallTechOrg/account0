@@ -27,7 +27,9 @@ Data lives in `data/` (SQLite `data/account0.db`, documents, watched inbox `data
 ./scripts/gate-p6.sh   # + compliance calendar & month-close checklist
 ./scripts/gate-p7.sh   # + learning layer (real grounded Q&A, walkthroughs, DIY coaching)
 ./scripts/gate-p8.sh   # + Google Gmail/Drive (unconnected; OAuth flow tested with a mock)
+./scripts/gate-p9.sh   # + ledger postings for bank/TDS/payroll, headless-browser UI flow (stubbed extraction, no LLM spend)
 ```
+The P9 UI gate drives headless Chromium via `playwright-core`; it uses a cached Playwright Chromium (`npx playwright-core install chromium` if none is present, or set `PLAYWRIGHT_CHROMIUM` to a Chrome binary).
 Backend tests only: `cd backend && ./gradlew test`. Frontend: `cd frontend && npm test && npx next build`.
 
 ## Docs

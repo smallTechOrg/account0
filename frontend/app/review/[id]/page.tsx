@@ -63,7 +63,7 @@ export default function ReviewInvoice() {
 
   return (
     <>
-      <h1>Review invoice #{inv.id} <span className={`pill ${inv.status === "CONFIRMED" ? "ok" : "warn"}`}>{inv.status}</span> {inv.locked && <span className="pill bad">period locked</span>}</h1>
+      <h1>Review invoice #{inv.id} <span className={`pill ${inv.status === "CONFIRMED" ? "ok" : inv.status === "CANCELLED" ? "bad" : "warn"}`}>{inv.status}</span> {inv.locked && <span className="pill bad">period locked</span>}</h1>
       <div className="grid2">
         <div className="card" style={{ minHeight: 700 }}>
           {inv.document_id ? (
@@ -166,7 +166,7 @@ export default function ReviewInvoice() {
                 </div>
               </>
             ) : (
-              inv.status === "CONFIRMED" && !inv.locked && <button className="secondary" onClick={() => run(() => api(`/api/invoices/${id}/reopen`, { method: "POST" }), "Reopened.")}>Reopen for edit</button>
+              inv.status === "CONFIRMED" && !inv.locked && <div className="row"><button className="secondary" onClick={() => run(() => api(`/api/invoices/${id}/reopen`, { method: "POST" }), "Reopened.")}>Reopen for edit</button>{inv.direction === "SALE" && <button className="secondary" onClick={() => { const r = prompt("This sales document was issued and then cancelled. Reason (kept in the audit trail)?"); if (r) run(() => api(`/api/invoices/${id}/cancel`, jsonBody("POST", { reason: r })), "Marked as cancelled — it is removed from your returns and counted as cancelled in GSTR-1 Table 13."); }}>Mark as cancelled</button>}</div>
             )}
             {msg && <p className={msg.endsWith(".") && !msg.startsWith("Cannot") && !msg.startsWith("Review") ? "" : "err"}>{msg}</p>}
             <p className="muted">Total {inr(inv.total_paise)} · <a href={`/audit?entity=invoice&entityId=${inv.id}`}>change history</a></p>

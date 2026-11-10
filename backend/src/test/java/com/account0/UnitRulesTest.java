@@ -58,4 +58,13 @@ class UnitRulesTest {
         List<LedgerService.Line> rcm = LedgerService.linesFor(cases.get(4));
         assertThat(rcm).extracting(LedgerService.Line::account).contains("Input IGST (RCM)", "RCM IGST payable");
     }
+
+    @Test void cleanRateToleratesStrayCharacters() {
+        assertThat(InvoiceChecks.cleanRate("18 %")).isEqualTo("18");
+        assertThat(InvoiceChecks.cleanRate("18\u202f%")).isEqualTo("18");
+        assertThat(InvoiceChecks.cleanRate("2.5%")).isEqualTo("2.5");
+        assertThat(InvoiceChecks.cleanRate("n/a")).isNull();
+        assertThat(InvoiceChecks.cleanRate("1.2.3")).isNull();
+        assertThat(InvoiceChecks.cleanRate(null)).isNull();
+    }
 }

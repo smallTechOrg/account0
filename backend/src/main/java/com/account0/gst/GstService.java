@@ -33,6 +33,8 @@ public class GstService {
         Integer pending = jdbc.queryForObject("SELECT COUNT(*) FROM document WHERE tenant_id=? AND status IN ('QUEUED','EXTRACTING','FAILED')", Integer.class, Tenant.current());
         if (pending != null && pending > 0) w.add(pending + " uploaded document(s) are not yet extracted or failed extraction — they may belong to this period.");
         if (company.gstin() == null) w.add("Company GSTIN is not set — intra/inter-state classification cannot be verified.");
+        if ("QUARTERLY".equals(company.get().get("gst_filing_frequency")))
+            w.add("Your profile says QUARTERLY (QRMP scheme). Account0 computes monthly figures only: under QRMP, GSTR-1 and GSTR-3B are filed quarterly (B2B invoices of months 1-2 may go via IFF) and tax for months 1-2 is paid by challan (PMT-06). Use these monthly numbers as a working basis and confirm the quarterly figures with your CA.");
         if (isLocked(period)) w.add("This period is LOCKED (filed). Figures are frozen unless you unlock it.");
         return w;
     }
@@ -49,7 +51,8 @@ public class GstService {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("period", period); r.put("gstin", company.gstin());
         r.put("warnings", warnings(period));
-        r.putAll(Gstr1Calculator.compute(confirmed(period), company.gstin(), Gstin.stateCode(company.gstin()), period));
+        List<String> cancelled = jdbc.queryForList("SELECT invoice_no FROM invoice WHERE tenant_id=? AND period=? AND status='CANCELLED' AND direction='SALE' ORDER BY invoice_date, id", String.class, Tenant.current(), period);
+        r.putAll(Gstr1Calculator.compute(confirmed(period), company.gstin(), Gstin.stateCode(company.gstin()), period, cancelled));
         return r;
     }
 

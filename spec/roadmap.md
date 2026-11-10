@@ -50,3 +50,8 @@ need `.env`.
 
 ## P8 — Gmail/Drive integration
 - OAuth flow + Gmail label/Drive folder pollers behind interfaces; mocked in tests; disconnected until user adds credentials.
+
+## P9 — Completeness & hardening
+- Slices: balanced journals for bank payments/receipts (incl. customer net-of-TDS), TDS payable (deduct + deposit) and payroll; Playwright (headless Chromium, playwright-core) UI gate with stubbed extraction covering profile -> upload -> review/confirm -> GST explain, and the UI->API proxy; UI polish (Indian grouping, month/FY pickers, empty states, error toasts, STUB/ASSUMED labels); export credit notes (CDNUR), cancelled documents in Table 13, QRMP warning, old-regime flag.
+- Gate: `scripts/gate-p9.sh` (no LLM spend; builds the UI into `.next-gate` and proxies to the gate backend, never touching the running app's `.next`).
+

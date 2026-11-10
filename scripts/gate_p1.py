@@ -51,7 +51,7 @@ for e in exp["invoices"]:
     upd = {"supply_type": e["supply_type"], "reverse_charge": e["reverse_charge"]}
     if "itc_eligible" in e: upd["itc_eligible"] = e["itc_eligible"]
     if e.get("foreign_amount") and e["direction"] == "PURCHASE":
-        check(inv["foreign_amount"] in ("1200.00", "1200", "1,200.00"), f"{e['file']}: foreign amount {inv['foreign_amount']}")
+        check(float(str(inv["foreign_amount"]).replace(",", "")) == 1200.0, f"{e['file']}: foreign amount {inv['foreign_amount']}")
         upd.update({"taxable_paise": e["inr_taxable_paise"], "total_paise": e["inr_taxable_paise"], "fx_rate": "84.00",
                     "lines": [{"description": "Atlas Analytics seats", "gst_rate": e["gst_rate"], "taxable_paise": e["inr_taxable_paise"]}]})
     if e["supply_type"] == "EXPORT_LUT":

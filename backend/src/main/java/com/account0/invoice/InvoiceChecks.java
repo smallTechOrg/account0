@@ -94,6 +94,12 @@ public final class InvoiceChecks {
         return f;
     }
 
+    /** Keeps digits and one decimal point ("18 %", "18\u00a0%" -> "18"); null when nothing numeric is left. Prevents unparseable rates (from LLM text or typing) from crashing totals. */
+    public static String cleanRate(String r) {
+        if (r == null) return null;
+        String c = r.replaceAll("[^0-9.]", "");
+        return c.isEmpty() || !c.matches("\\d+(\\.\\d+)?") ? null : c;
+    }
     static String stripZeros(String r) { try { return new BigDecimal(r).stripTrailingZeros().toPlainString(); } catch (Exception e) { return r; } }
     static String rs(long p) { return "₹" + BigDecimal.valueOf(p, 2).toPlainString(); }
 }
