@@ -14,6 +14,9 @@ export default function Calendar() {
   const [hide, setHide] = useState(true);
   const [msg, setMsg] = useState("");
   const [agm, setAgm] = useState("");
+  const [dirs, setDirs] = useState<any[]>([]);
+  useEffect(() => { api("/api/compliance/directors").then(setDirs).catch(() => {}); }, []);
+  const saveDirs = async (d: any[]) => { try { setDirs(await api("/api/compliance/directors", jsonBody("PUT", d))); load(); setMsg("Directors saved."); } catch (e: any) { setMsg(e.message); } };
   const load = () => api(`/api/compliance/calendar?fy=${fy}`).then((c) => { setCal(c); setAgm(c.agmDate ?? ""); }).catch((e) => setMsg(e.message));
   useEffect(() => { load(); }, [fy]);
   const mark = async (it: any, status: string) => {
@@ -34,6 +37,17 @@ export default function Calendar() {
         <div><label>AGM date (moves the ROC dates)</label><input type="date" value={agm} onChange={(e) => setAgm(e.target.value)} /> <button className="secondary" onClick={async () => { await api("/api/settings/company.agm_date", jsonBody("PUT", { value: agm })); load(); }}>Save</button></div>
         <label style={{ display: "inline" }}><input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> hide done / not applicable</label>
         <button className="secondary" onClick={async () => { const b = prompt("Mark everything due BEFORE which date as already done? (YYYY-MM-DD)"); if (!b) return; const r = await api("/api/compliance/catch-up", jsonBody("POST", { fy, before: b })); setMsg(`${r.marked} items marked done (audited).`); load(); }}>I was already compliant up to…</button>
+      </div>
+      <div className="card">
+        <b>Directors (DIR-3 KYC every 3 financial years, by 30 June)</b>
+        <p className="muted">From 31 Mar 2026 (MCA G.S.R. 943(E)) each director files KYC once every three FYs instead of every year. Record the FY of each director's last KYC so the calendar shows the right year. Verify the first cycle with your CA.</p>
+        <table><thead><tr><th>Name</th><th>DIN</th><th>Last KYC FY (e.g. 2025-26)</th><th /></tr></thead>
+          <tbody>{dirs.map((d, i) => <tr key={i}>
+            <td><input value={d.name ?? ""} onChange={(e) => setDirs(dirs.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></td>
+            <td><input value={d.din ?? ""} onChange={(e) => setDirs(dirs.map((x, j) => j === i ? { ...x, din: e.target.value } : x))} /></td>
+            <td><input value={d.lastKycFy ?? ""} onChange={(e) => setDirs(dirs.map((x, j) => j === i ? { ...x, lastKycFy: e.target.value } : x))} /></td>
+            <td><button className="secondary" onClick={() => saveDirs(dirs.filter((_, j) => j !== i))}>Remove</button></td></tr>)}</tbody></table>
+        <button className="secondary" onClick={() => setDirs([...dirs, { name: "", din: "", lastKycFy: "" }])}>Add director</button> <button onClick={() => saveDirs(dirs)}>Save directors</button>
       </div>
       {msg && <div className="card">{msg}</div>}
       {cal && <p>{Object.entries(cal.counts).map(([k, v]: any) => <span key={k} className={`pill ${TAG[k]}`} style={{ marginRight: 8 }}>{k.replace("_", " ").toLowerCase()}: {v}</span>)}</p>}

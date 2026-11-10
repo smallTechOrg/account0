@@ -76,7 +76,7 @@
   "title": "ITC only if the invoice is in GSTR-2B",
   "citation": "Sec 16(2)(aa) CGST Act",
   "keywords": "2b gstr-2b itc vendor not filed gstr-1 appear",
-  "text": "Credit can be taken only for invoices whose details have been furnished by the supplier and communicated to you in GSTR-2B. If your vendor has not filed GSTR-1 for the month, their invoice will not be in your GSTR-2B and you cannot claim the credit that month.",
+  "text": "Credit can be taken only for invoices whose details have been furnished by the supplier and communicated to you in GSTR-2B. If your vendor has not filed GSTR-1 for the month, their invoice will not be in your GSTR-2B and you cannot claim the credit that month. An older invoice that first appears in this month's 2B is claimable now; a line marked 'ITC not available' is not.",
   "kind": "provision"
  },
  {
@@ -138,9 +138,9 @@
  {
   "id": "cgst-rule-88a",
   "title": "Order of utilisation of IGST credit",
-  "citation": "Rule 88A CGST Rules",
+  "citation": "Rule 88A CGST Rules; Circular 98/17/2019-GST",
   "keywords": "order igst credit first cgst sgst utilise",
-  "text": "IGST credit has to be fully used first - towards IGST, then CGST, then SGST - before CGST or SGST credit can be used. This is why a company with a large IGST balance often pays little CGST/SGST in cash.",
+  "text": "IGST credit has to be used up first: towards IGST liability, and the rest towards CGST and SGST in any order or proportion (CBIC Circular 98/17/2019-GST) - only after that can CGST or SGST credit be used. CGST credit then pays CGST, then IGST; SGST credit pays SGST, then IGST. Because the split of IGST credit between CGST and SGST is free, it should go where your own CGST/SGST credit falls short, so that no cash is paid while credit is left over.",
   "kind": "provision"
  },
  {
@@ -164,7 +164,7 @@
   "title": "HSN/SAC codes in GSTR-1",
   "citation": "Notification 78/2020-CT as amended",
   "keywords": "hsn sac code digits summary table 12",
-  "text": "Taxpayers must report HSN/SAC codes in the GSTR-1 HSN summary: 4 digits up to ₹5 crore turnover, 6 digits above. Software and IT-enabled services are generally under SAC 9983.",
+  "text": "Taxpayers must report HSN/SAC codes in the GSTR-1 HSN summary (Table 12): 4 digits up to ₹5 crore turnover, 6 digits above. From the May 2025 period the portal only accepts codes picked from its HSN list (no free text), and nil-rated/exempt supplies are part of the summary. Software and IT services are generally under SAC 9983 (e.g. 998314 IT design and development, 998315 hosting).",
   "kind": "provision"
  },
  {
@@ -212,15 +212,15 @@
   "title": "TDS on professional and technical fees",
   "citation": "Sec 194J Income-tax Act 1961",
   "keywords": "194j professional technical fees director consultant 10 percent 2 percent",
-  "text": "Fees for professional services, royalty and director's fees: 10%. Fees for technical services and call-centre: 2%. Threshold ₹50,000 per payee in a year (from 1 Apr 2025). A professional is, for example, a lawyer, CA, architect or consultant; whether your vendor is 'technical' or 'professional' is a judgement you confirm.",
+  "text": "Fees for professional services and royalty: 10%, threshold ₹50,000 per payee in a year (from 1 Apr 2025). Fees for technical services and call-centre: 2%, same threshold. Remuneration, fees or commission to a DIRECTOR (other than salary, 194J(1)(ba)): 10% with NO threshold. A professional is, for example, a lawyer, CA, architect or consultant; whether your vendor is 'technical' or 'professional' is a judgement you confirm.",
   "kind": "provision"
  },
  {
   "id": "it-194i",
   "title": "TDS on rent",
   "citation": "Sec 194I Income-tax Act 1961",
-  "keywords": "194i rent land building machinery 10 percent 2 percent office",
-  "text": "Rent: 2% for plant, machinery and equipment; 10% for land, building and furniture. Threshold ₹6,00,000 per year (from 1 Apr 2025).",
+  "keywords": "194i rent land building machinery 10 percent 2 percent office monthly 50000 per month 393 1008 1009",
+  "text": "Rent: 2% for plant, machinery and equipment; 10% for land, building and furniture. From 1 Apr 2025 TDS applies when the rent exceeds ₹50,000 for a month or part of a month (earlier ₹2,40,000 a year). Under the Income-tax Act 2025 (from 1 Apr 2026) rent is in the s.393(1) table, payment codes 1008 (plant & machinery) and 1009 (land/building) - verify codes with your CA.",
   "kind": "provision"
  },
  {
@@ -243,16 +243,16 @@
   "id": "it-195",
   "title": "TDS on payments to non-residents",
   "citation": "Sec 195 Income-tax Act 1961",
-  "keywords": "195 non resident foreign payment remittance 15ca 15cb dtaa treaty",
-  "text": "Payments to non-residents that are chargeable to tax in India require TDS at the rate in force or the treaty rate, supported by Forms 15CA/15CB. Whether a foreign SaaS or services payment is taxable in India depends on the nature of the payment and the treaty, so Account0 does not compute it - take your CA's advice before remitting.",
+  "keywords": "195 non resident foreign payment remittance 15ca 15cb dtaa treaty equalisation levy google ads saas",
+  "text": "Payments to non-residents that are chargeable to tax in India require TDS at the rate in force or the treaty rate, supported by Forms 15CA/15CB. Whether a foreign SaaS or services payment is taxable in India depends on the nature of the payment and the treaty, so Account0 does not compute it - take your CA's advice before remitting. There is no equalisation levy on foreign SaaS or online vendors any more: the 2% levy on e-commerce supplies was abolished from 1 Aug 2024 and the 6% levy on online advertising from 1 Apr 2025.",
   "kind": "provision"
  },
  {
   "id": "it-206aa",
   "title": "Higher TDS rate without PAN",
   "citation": "Sec 206AA Income-tax Act 1961",
-  "keywords": "pan not available 20 percent higher rate",
-  "text": "If the payee does not furnish a PAN, TDS is deducted at the higher of the normal rate, the rate in force, or 20%.",
+  "keywords": "pan not available 20 percent higher rate 397 5 percent 194q salary average rate",
+  "text": "If the payee does not furnish a PAN, TDS is deducted at the higher of the normal rate, the rate in force, or 20% - but 5% for purchase of goods (194Q). For salary, the higher of 20% and the average rate, and nil if no tax is payable. From 1 Apr 2026 the same rule is s.397(2) Income-tax Act 2025 (verify exact rates with your CA).",
   "kind": "provision"
  },
  {
@@ -300,7 +300,7 @@
   "title": "Rounding of tax amounts",
   "citation": "Sec 288B Income-tax Act 1961",
   "keywords": "rounding rupee nearest",
-  "text": "TDS amounts are rounded to the nearest rupee; tax payable/refundable by the taxpayer is rounded to the nearest ₹10.",
+  "text": "Sec 288B rounds the tax payable or refundable by a taxpayer to the nearest ₹10. It is not the rule for TDS: TDS is in practice rounded to the nearest rupee (as the TDS returns and challans require whole rupees).",
   "kind": "provision"
  },
  {
@@ -370,9 +370,9 @@
  {
   "id": "ca-dir3-kyc",
   "title": "DIR-3 KYC for directors",
-  "citation": "Rule 12A, Companies (Appointment and Qualification of Directors) Rules 2014",
-  "keywords": "dir-3 kyc director din deactivated 30 september",
-  "text": "Every director holding a DIN files DIR-3 KYC by 30 September each year. A missed filing deactivates the DIN until a fee of ₹5,000 is paid.",
+  "citation": "Rule 12A, Companies (Appointment and Qualification of Directors) Rules 2014, as amended by G.S.R. 943(E)",
+  "keywords": "dir-3 kyc director din deactivated 30 june three years 3 year cycle",
+  "text": "Under the amended Rule 12A (G.S.R. 943(E), 31 Dec 2025, effective 31 Mar 2026) every person holding a DIN files DIR-3 KYC once every three financial years, by 30 June, instead of every year by 30 September. A KYC is also needed within 30 days whenever the director's mobile number, e-mail or residential address changes. A missed filing deactivates the DIN until a fee of ₹5,000 is paid.",
   "kind": "provision"
  },
  {
@@ -404,7 +404,7 @@
   "title": "Set-off in GSTR-3B - in plain words",
   "citation": "Glossary",
   "keywords": "set off offset liability credit ledger cash ledger plain simple",
-  "text": "Your GST liability is first reduced by available input credit following a fixed order (IGST credit first); what is left is paid in cash. RCM tax is always paid in cash.",
+  "text": "Your GST liability is first reduced by available input credit following set rules (IGST credit must be used up first, and can be split between CGST and SGST as needed); what is left is paid in cash. RCM tax is always paid in cash.",
   "kind": "term"
  },
  {
@@ -454,5 +454,29 @@
   "keywords": "lock period filed edit unlock audit",
   "text": "Once a return is filed, the figures have been reported to the Government. Locking the month stops silent edits that would make your books disagree with the filed return; unlocking requires a reason that is kept in the audit trail.",
   "kind": "concept"
+ },
+ {
+  "id": "cgst-13-3",
+  "title": "Time of supply under reverse charge",
+  "citation": "Sec 13(3) CGST Act",
+  "keywords": "time of supply reverse charge rcm 60 days payment date import of services when liable",
+  "text": "For services under reverse charge (including import of services) the time of supply is the earlier of the date of payment and the date immediately after sixty days from the supplier's invoice. If the supplier is an associated enterprise abroad, it is the earlier of the entry in your books and the payment. The RCM tax goes into the GSTR-3B of that month, and its ITC follows the payment of that tax.",
+  "kind": "provision"
+ },
+ {
+  "id": "cgst-rule-37",
+  "title": "Reversal of ITC when the supplier is not paid in 180 days",
+  "citation": "Rule 37 CGST Rules; Sec 16(2) second proviso",
+  "keywords": "180 days unpaid supplier reverse itc 4b2 reclaim 4d1 interest",
+  "text": "If you do not pay a supplier (value plus tax) within 180 days of the invoice date, the ITC taken on it must be reversed in GSTR-3B Table 4B(2) with interest. Once you pay, the credit can be re-claimed (shown in 4D(1)).",
+  "kind": "provision"
+ },
+ {
+  "id": "gst-lut",
+  "title": "Renewing the LUT for exports",
+  "citation": "Rule 96A CGST Rules; Form GST RFD-11",
+  "keywords": "lut renewal rfd-11 export without payment every year 1 april",
+  "text": "A Letter of Undertaking (Form GST RFD-11) lets you export without paying IGST. It is valid for one financial year, so file a new one before 1 April each year; otherwise exports must be made with payment of IGST and the tax claimed back as a refund.",
+  "kind": "provision"
  }
 ]

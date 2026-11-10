@@ -54,6 +54,12 @@ public class LedgerService {
                 if (ig > 0) out.add(new Line("RCM IGST payable", 0, ig));
                 if (cess > 0) out.add(new Line("RCM Cess payable", 0, cess));
                 // total = taxable + cess for RCM; any rounding difference goes to round-off
+            } else if (t == SupplyType.IMPORT_GOODS) {
+                // customs IGST/cess is paid to customs on the Bill of Entry, not to the foreign vendor
+                out.add(new Line(expense, itc ? taxable : taxable + tax, 0));
+                if (itc) addInput(out, cg, sg, ig, cess, "");
+                out.add(new Line("Payable: " + party, 0, total - ig - cess));
+                if (ig + cess > 0) out.add(new Line("Payable: Customs (IGST/cess on Bill of Entry)", 0, ig + cess));
             } else {
                 out.add(new Line(expense, itc ? taxable : taxable + tax, 0));
                 if (itc) addInput(out, cg, sg, ig, cess, "");

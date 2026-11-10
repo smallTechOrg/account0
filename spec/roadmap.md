@@ -55,3 +55,7 @@ need `.env`.
 - Slices: balanced journals for bank payments/receipts (incl. customer net-of-TDS), TDS payable (deduct + deposit) and payroll; Playwright (headless Chromium, playwright-core) UI gate with stubbed extraction covering profile -> upload -> review/confirm -> GST explain, and the UI->API proxy; UI polish (Indian grouping, month/FY pickers, empty states, error toasts, STUB/ASSUMED labels); export credit notes (CDNUR), cancelled documents in Table 13, QRMP warning, old-regime flag.
 - Gate: `scripts/gate-p9.sh` (no LLM spend; builds the UI into `.next-gate` and proxies to the gate backend, never touching the running app's `.next`).
 
+## P10 — Tax-correctness audit fixes
+- Slices: cash-minimising set-off (Rule 88A + Circular 98/17/2019); 4A(5) from matched GSTR-2B lines (provisional without 2B, Sec 16(4) time bar, ISD 4A(4)); 2B per-head matching incl. CDNR/B2BA/ISD/IMPG; RCM time of supply (Sec 13(3)); 194I monthly threshold, 194J director fees, per-section no-PAN rate, salary no-PAN; DIR-3 KYC 3-year cycle with directors; FY-aware TDS form names (Forms 138/140/144/130/131); LUT/15CA/Form 144/MSME-1/GSTR-9C calendar items; GSTR-1 Table 8 buckets, Table 13 series, HSN blocker, B2CL notes in CDNUR, 9B netting; 3.2 composition/UIN, Table 5 split; RCM CGST=SGST split; import-of-goods customs payable; credit notes reduce outstanding; corpus updates.
+- Gate: `scripts/gate-p10.sh` (no LLM spend).
+

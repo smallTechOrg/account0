@@ -10,6 +10,7 @@ const HEADER: [string, string][] = [
   ["counterparty_gstin", "Counterparty GSTIN"], ["counterparty_country", "Country"], ["place_of_supply", "Place of supply (state code, 96 = abroad)"],
   ["currency", "Currency"], ["foreign_amount", "Foreign amount"], ["fx_rate", "Exchange rate used"], ["original_invoice_no", "Original invoice (credit/debit note)"],
   ["category", "Category / ledger head"],
+  ["rcm_paid_on", "Reverse charge: date you paid the vendor (YYYY-MM-DD)"],
 ];
 const LINE_MONEY = ["taxable_paise", "cgst_paise", "sgst_paise", "igst_paise"];
 
@@ -40,7 +41,7 @@ export default function ReviewInvoice() {
   const payload = () => {
     const p: any = {};
     HEADER.forEach(([k]) => (p[k] = form[k] ?? null));
-    ["direction", "doc_type", "supply_type", "reverse_charge", "itc_eligible", "notes"].forEach((k) => (p[k] = form[k] ?? null));
+    ["direction", "doc_type", "supply_type", "reverse_charge", "itc_eligible", "notes", "nil_type", "buyer_kind"].forEach((k) => (p[k] = form[k] ?? null));
     for (const k of MONEY) { const v = toPaise(String(form[k] ?? "")); if (v === null && form[k]) throw new Error(`Bad amount in ${k}`); p[k] = v ?? 0; }
     p.lines = form.lines.map((l: any) => {
       const m: any = { description: l.description, hsn_sac: l.hsn_sac, quantity: l.quantity, gst_rate: l.gst_rate, uqc: l.uqc };
@@ -109,6 +110,17 @@ export default function ReviewInvoice() {
                   <select disabled={!editable} value={form.itc_eligible ?? ""} onChange={(e) => setForm({ ...form, itc_eligible: e.target.value === "" ? null : Number(e.target.value) })}>
                     <option value="">—</option><option value="1">Yes</option><option value="0">No (blocked u/s 17(5) / personal / exempt use)</option></select></div>
               )}
+              {form.supply_type === "NIL_EXEMPT_OUT" && (
+                <div><label>Nil-rated or exempt?</label>
+                  <select disabled={!editable} value={form.nil_type ?? ""} onChange={(e) => setForm({ ...form, nil_type: e.target.value || null })}>
+                    <option value="">— (reported as exempt)</option><option value="NIL">Nil-rated</option><option value="EXEMPT">Exempt</option></select></div>
+              )}
+              {form.supply_type === "B2B" && (
+                <div><label>Buyer is</label>
+                  <select disabled={!editable} value={form.buyer_kind ?? ""} onChange={(e) => setForm({ ...form, buyer_kind: e.target.value || null })}>
+                    <option value="">Regular taxpayer</option><option value="COMPOSITION">Composition dealer</option><option value="UIN">UIN holder (embassy / UN body)</option></select></div>
+              )}
+              {inv.rcm_tos_date && <span className="muted">RCM time of supply: <b>{inv.rcm_tos_date}</b> (earlier of payment and invoice date + 61 days, Sec 13(3)) → 3B of {String(inv.rcm_tos_date).slice(0, 7)}</span>}
               <span className="muted">Source: {inv.tax_treatment_source === "RULE" ? "your saved rule" : inv.tax_treatment_source === "USER" ? "you" : "not set"}</span>
             </div>
           </div>

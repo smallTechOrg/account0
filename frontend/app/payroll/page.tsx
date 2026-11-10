@@ -23,7 +23,7 @@ export default function Payroll() {
       <div className="assumed">New regime only (FY 2025-26 slabs assumed for later years). Old-regime employees and incomes above ₹50 lakh are flagged for your CA — never guessed. Other income, perquisites and deductions are not modelled.</div>
       <div className="card row"><div><label>Payroll CSV</label><input type="file" accept=".csv" onChange={(e) => upload(e.target.files?.[0])} /></div>
         <div><label>FY</label><select value={fy} onChange={(e) => setFy(e.target.value)}>{fyOptions().map((o) => <option key={o}>{o}</option>)}</select></div>
-        {[1, 2, 3, 4].map((q) => <a key={q} className="btn secondary" href={`/api/payroll/24q.csv?fy=${fy}&quarter=${q}`}>24Q Q{q} CSV</a>)}</div>
+        {[1, 2, 3, 4].map((q) => <a key={q} className="btn secondary" href={`/api/payroll/24q.csv?fy=${fy}&quarter=${q}`}>{fy >= "2026-27" ? "Form 138" : "24Q"} Q{q} CSV</a>)}</div>
       {msg && <div className="card">{msg}</div>}
       {data && data.lines.some((l: any) => l.regime === "OLD") && <div className="stub" data-testid="old-regime">Some employees are on the OLD regime: their TDS is shown as ₹0.00 because Account0 does not compute old-regime tax (it needs 80C/HRA declarations). Ask your CA — do not treat ₹0 as correct.</div>}
       {data && <Empty show={data.lines.length === 0}>No payroll for FY {fy} yet. Upload a payroll CSV above.</Empty>}

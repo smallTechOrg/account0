@@ -62,7 +62,9 @@ public class BankService {
         List<BankMatcher.Invoice> out = new ArrayList<>();
         for (Map<String, Object> r : jdbc.queryForList("""
                 SELECT i.id, i.direction, i.invoice_no, i.invoice_date, i.counterparty_name, i.total_paise,
-                  i.total_paise - COALESCE((SELECT SUM(CASE WHEN i.direction='SALE' THEN t.credit_paise + t.customer_tds_paise ELSE t.debit_paise END) FROM bank_txn t WHERE t.matched_invoice_id=i.id AND t.status='MATCHED'),0) - COALESCE((SELECT SUM(e.tds_paise) FROM tds_entry e WHERE e.invoice_id=i.id AND e.status='DEDUCT'),0) AS outstanding
+                  i.total_paise - COALESCE((SELECT SUM(CASE WHEN i.direction='SALE' THEN t.credit_paise + t.customer_tds_paise ELSE t.debit_paise END) FROM bank_txn t WHERE t.matched_invoice_id=i.id AND t.status='MATCHED'),0) - COALESCE((SELECT SUM(e.tds_paise) FROM tds_entry e WHERE e.invoice_id=i.id AND e.status='DEDUCT'),0)
+                  - COALESCE((SELECT SUM(n.total_paise) FROM invoice n WHERE n.tenant_id=i.tenant_id AND n.status='CONFIRMED' AND n.doc_type='CREDIT_NOTE' AND n.direction=i.direction
+                      AND n.original_invoice_no=i.invoice_no AND COALESCE(n.counterparty_gstin, n.counterparty_name)=COALESCE(i.counterparty_gstin, i.counterparty_name)),0) AS outstanding
                 FROM invoice i WHERE i.tenant_id=? AND i.status='CONFIRMED' AND i.doc_type='INVOICE' AND i.invoice_date IS NOT NULL ORDER BY i.invoice_date""", Tenant.current()))
             out.add(new BankMatcher.Invoice(((Number) r.get("id")).longValue(), "SALE".equals(r.get("direction")), (String) r.get("invoice_no"), (String) r.get("invoice_date"), (String) r.get("counterparty_name"), ((Number) r.get("outstanding")).longValue()));
         return out;
