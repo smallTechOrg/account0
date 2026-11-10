@@ -56,7 +56,7 @@ export default function Inbox() {
             <button className="secondary" onClick={async () => { await api("/api/sources/folder/scan", { method: "POST" }); load(); }}>Scan now</button></p>
           {sources.external.map((s: any) => (
             <div key={s.name} className={s.connected ? "card" : "stub"}>
-              <b>{s.name}</b> <span className="muted">{s.target}</span>
+              <b>{s.name}</b> {!s.connected && <span className="pill warn">STUB — not connected</span>} <span className="muted">{s.target}</span>
               <div>{s.message}</div>
               <div className="muted">Last sync: {s.lastSync}</div>
               <div className="row" style={{ marginTop: 6 }}>

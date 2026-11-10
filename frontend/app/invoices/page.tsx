@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { inr } from "@/lib/format";
+import { Empty } from "@/lib/Empty";
 
 export default function Invoices() {
   const [rows, setRows] = useState<any[]>([]);
@@ -17,7 +18,8 @@ export default function Invoices() {
     <>
       <h1>Invoices</h1>
       <div className="row" style={{ marginBottom: 10 }}>
-        <div><label>Period (YYYY-MM)</label><input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="2026-10" /></div>
+        <div><label>Period</label><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} /></div>
+        {period && <button className="secondary" onClick={() => setPeriod("")}>All periods</button>}
         <div><label>Status</label><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">all</option><option>DRAFT</option><option>CONFIRMED</option><option>REJECTED</option></select></div>
       </div>
       <table>
@@ -33,6 +35,7 @@ export default function Invoices() {
           ))}
         </tbody>
       </table>
+      <Empty show={rows.length === 0}>No invoices match. Upload invoices in the Inbox, or clear the filters.</Empty>
     </>
   );
 }

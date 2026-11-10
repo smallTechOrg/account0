@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Empty } from "@/lib/Empty";
 
 export default function Audit() {
   const [rows, setRows] = useState<any[]>([]);
@@ -23,6 +24,7 @@ export default function Audit() {
           ))}
         </tbody>
       </table>
+      <Empty show={rows.length === 0}>No audit entries yet — every change to a figure, rule or lock will appear here.</Empty>
     </>
   );
 }

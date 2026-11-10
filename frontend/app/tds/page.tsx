@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, jsonBody } from "@/lib/api";
-import { inr } from "@/lib/format";
+import { inr, fyOptions } from "@/lib/format";
+import { Empty } from "@/lib/Empty";
 import { Why } from "@/lib/Why";
 
 function currentFy() { const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-${String((y + 1) % 100).padStart(2, "0")}`; }
@@ -21,7 +22,7 @@ export default function Tds() {
     <>
       <h1>TDS register (26Q data)</h1>
       <p className="muted">You decide the section for each purchase — Account0 never guesses. It then applies the rate and thresholds with plain code and keeps the year-to-date position per vendor. TDS base = invoice value excluding GST.</p>
-      <div className="stub">Rates/thresholds are as understood for FY 2025-26 onwards (Finance Act 2025) under the Income-tax Act 1961 section numbers. Confirm with your CA, especially after the Income-tax Act 2025 renumbering. Payments to non-residents (Sec 195) are never computed.</div>
+      <div className="assumed">Rates/thresholds are as understood for FY 2025-26 onwards (Finance Act 2025) under the Income-tax Act 1961 section numbers. Confirm with your CA, especially after the Income-tax Act 2025 renumbering. Payments to non-residents (Sec 195) are never computed.</div>
       <h2>Needs a TDS decision ({pending.length}) <Why k="TDS" /></h2>
       {msg && <div className="card err">{msg}</div>}
       <table>
@@ -38,7 +39,7 @@ export default function Tds() {
                 <button disabled={!(choice[p.id]?.section ?? p.suggestedSection)} onClick={async () => { try { await api("/api/tds/assign", jsonBody("POST", { invoiceId: p.id, section: choice[p.id]?.section ?? p.suggestedSection, pan: choice[p.id]?.pan, payeeType: choice[p.id]?.type, saveRule: !!choice[p.id]?.save })); setMsg(""); load(); } catch (e: any) { setMsg(e.message); } }}>Save</button></td></>}
           </tr>))}</tbody>
       </table>
-      <h2>Register FY <input size={7} value={fy} onChange={(e) => setFy(e.target.value)} /></h2>
+      <h2>Register FY <select value={fy} onChange={(e) => setFy(e.target.value)}>{fyOptions().map((o) => <option key={o}>{o}</option>)}</select></h2>
       {reg && <>
         <p><b>Total TDS to deduct: {inr(reg.totalTdsPaise)}</b> {[1, 2, 3, 4].map((q) => <a key={q} className="btn secondary" style={{ marginLeft: 6 }} href={`/api/tds/26q.csv?fy=${fy}&quarter=${q}`}>26Q Q{q} CSV</a>)}</p>
         <table data-testid="tds-register">
@@ -47,6 +48,7 @@ export default function Tds() {
             <tr key={r.id} className={r.status === "DEDUCT" ? "flag" : ""}><td>{r.payment_date}</td><td>{r.invoice_no}</td><td>{r.payee_name}<div className="muted">{r.payee_pan ?? "no PAN"}</div></td><td>{r.section}</td><td className="num">{inr(r.base_paise)}</td><td className="num">{r.rate_bp / 100}%</td><td className="num">{inr(r.tds_paise)}</td><td className="muted">{r.reason}</td>
               <td>{r.tds_paise > 0 && (r.deposited_on ? <span className="pill ok">{r.deposited_on}</span> : <button className="secondary" onClick={async () => { const d = prompt("Deposit date (YYYY-MM-DD)?"); if (!d) return; const c = prompt("Challan number?") || ""; try { await api(`/api/tds/${r.id}/deposit`, jsonBody("POST", { deposited_on: d, challan_no: c })); load(); } catch (e: any) { setMsg(e.message); } }}>Record deposit</button>)}</td></tr>))}</tbody>
         </table>
+        <Empty show={reg.rows.length === 0}>No TDS entries for FY {fy}. Pick a section for a purchase above and it appears here.</Empty>
         <h2>Threshold position</h2>
         <table><thead><tr><th>Payee</th><th>Section</th><th className="num">Total this FY</th><th className="num">Threshold</th><th>Used</th></tr></thead>
           <tbody>{reg.thresholds.map((t: any, i: number) => <tr key={i}><td>{t.payee}</td><td>{t.section}</td><td className="num">{inr(t.total)}</td><td className="num">{inr(t.annualThresholdPaise)}</td><td>{t.crossed ? <span className="pill bad">crossed</span> : <span className="pill">{t.percentOfThreshold}%</span>}</td></tr>)}</tbody></table>

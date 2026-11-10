@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { fyOptions } from "@/lib/format";
 import { api, jsonBody } from "@/lib/api";
 import { Why } from "@/lib/Why";
 
@@ -26,9 +27,9 @@ export default function Calendar() {
   return (
     <>
       <h1>Compliance calendar <Why k="CALENDAR" /></h1>
-      <div className="stub">{cal?.assumptions}</div>
+      <div className="assumed">{cal?.assumptions}</div>
       <div className="card row">
-        <div><label>Financial year</label><input size={8} value={fy} onChange={(e) => setFy(e.target.value)} /></div>
+        <div><label>Financial year</label><select value={fy} onChange={(e) => setFy(e.target.value)}>{fyOptions().map((o) => <option key={o}>{o}</option>)}</select></div>
         <div><label>Category</label><select value={cat} onChange={(e) => setCat(e.target.value)}><option value="">All</option>{cats.map((c) => <option key={c}>{c}</option>)}</select></div>
         <div><label>AGM date (moves the ROC dates)</label><input type="date" value={agm} onChange={(e) => setAgm(e.target.value)} /> <button className="secondary" onClick={async () => { await api("/api/settings/company.agm_date", jsonBody("PUT", { value: agm })); load(); }}>Save</button></div>
         <label style={{ display: "inline" }}><input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> hide done / not applicable</label>

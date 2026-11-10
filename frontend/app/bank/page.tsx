@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, jsonBody } from "@/lib/api";
-import { inr } from "@/lib/format";
+import { inr, toPaise } from "@/lib/format";
+import { Empty } from "@/lib/Empty";
 
 const TAG: Record<string, string> = { MATCHED: "ok", SUGGESTED: "warn", UNMATCHED: "bad", IGNORED: "" };
 
@@ -54,14 +55,16 @@ export default function Bank() {
         <tbody>{shown.map((t) => (
           <tr key={t.id}><td>{t.txn_date}</td><td>{t.description}<div className="muted">{t.ref}</div></td><td className="num">{t.debit_paise ? inr(t.debit_paise) : ""}</td><td className="num">{t.credit_paise ? inr(t.credit_paise) : ""}</td>
             <td><span className={`pill ${TAG[t.status]}`}>{t.status.toLowerCase()}</span>{t.match_source === "AUTO" && <span className="muted"> auto</span>}</td>
-            <td>{t.invoice_no && <><a href={`/review/${t.matched_invoice_id}`}>{t.invoice_no}</a> <span className="muted">{t.invoice_party}</span></>}<div className="muted">{t.match_note || t.ignore_reason}</div></td>
+            <td>{t.invoice_no && <><a href={`/review/${t.matched_invoice_id}`}>{t.invoice_no}</a> <span className="muted">{t.invoice_party}</span></>}{t.customer_tds_paise > 0 && <div className="muted">+ {inr(t.customer_tds_paise)} TDS withheld by customer</div>}<div className="muted">{t.match_note || t.ignore_reason}</div></td>
             <td>
               {t.status === "SUGGESTED" && <button onClick={() => act(() => api(`/api/bank/txns/${t.id}/match`, jsonBody("POST", { invoiceId: t.matched_invoice_id })))}>Accept</button>}{" "}
+              {t.status === "MATCHED" && t.credit_paise > 0 && <><button className="secondary" onClick={() => { const v = prompt("TDS the customer withheld from this receipt (₹, 0 if none)?", String((t.customer_tds_paise || 0) / 100)); const p = v === null ? null : toPaise(v); if (p !== null) act(() => api(`/api/bank/txns/${t.id}/customer-tds`, jsonBody("POST", { tdsPaise: p }))); }}>Customer TDS</button>{" "}</>}
               {(t.status === "MATCHED" || t.status === "SUGGESTED" || t.status === "IGNORED") && <button className="secondary" onClick={() => act(() => api(`/api/bank/txns/${t.id}/unmatch`, { method: "POST" }))}>Undo</button>}
               {(t.status === "UNMATCHED" || t.status === "SUGGESTED") && <> <button className="secondary" onClick={async () => setCands({ id: t.id, list: await api(`/api/bank/txns/${t.id}/candidates`) })}>Find invoice</button>{" "}
                 <button className="secondary" onClick={() => { const r = prompt("Why ignore? (bank charges, salary, own-account transfer...)"); if (r) act(() => api(`/api/bank/txns/${t.id}/ignore`, jsonBody("POST", { reason: r }))); }}>Ignore</button></>}
             </td></tr>))}</tbody>
       </table>
+      <Empty show={txns.length === 0}>No bank lines yet. Choose a CSV/XLSX statement above to import; matching to invoices runs automatically.</Empty>
       {cands && <div className="card"><b>Open invoices for line #{cands.id}</b>
         <table><thead><tr><th>Invoice</th><th>Party</th><th>Date</th><th className="num">Outstanding</th><th>Fit</th><th /></tr></thead>
           <tbody>{cands.list.map((c) => <tr key={c.invoiceId}><td>{c.invoiceNo}</td><td>{c.party}</td><td>{c.date}</td><td className="num">{inr(c.outstandingPaise)}</td><td className="muted">{c.score}% {c.note}</td>

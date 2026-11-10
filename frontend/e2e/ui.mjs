@@ -36,11 +36,22 @@ try {
   await page.goto(`${UI}/company`);
   await page.getByText("Legal name").locator("xpath=following-sibling::input[1]").fill("Acme Cloudworks Private Limited");
   await page.getByText("GSTIN", { exact: false }).first().locator("xpath=following-sibling::input[1]").fill("29AAKCA1234B1Z4");
+  // error toast: a GSTIN with a wrong check digit is rejected by the API and surfaced as a toast
+  await page.getByText("GSTIN", { exact: false }).first().locator("xpath=following-sibling::input[1]").fill("29AAKCA1234B1Z5");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("toast").first().waitFor();
+  step("invalid GSTIN produced an error toast");
+  await page.getByText("GSTIN", { exact: false }).first().locator("xpath=following-sibling::input[1]").fill("29AAKCA1234B1Z4");
   await page.getByRole("button", { name: "Save" }).click();
   await page.getByText("Saved.").waitFor();
   const co = await (await page.request.get(`${API}/api/company`)).json();
   assert.equal(co.gstin, "29AAKCA1234B1Z4"); assert.equal(co.state_code, "29");
   step("company profile saved through the UI and visible in the API");
+
+  // empty state (no filings recorded on a fresh DB)
+  await page.goto(`${UI}/filings`);
+  await page.getByTestId("empty").waitFor();
+  step("filings page shows its empty state");
 
   // 2. upload sample invoice
   await page.goto(`${UI}/inbox`);

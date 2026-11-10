@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, jsonBody } from "@/lib/api";
+import { Empty } from "@/lib/Empty";
 
 export default function Filings() {
   const [rows, setRows] = useState<any[]>([]);
@@ -37,6 +38,7 @@ export default function Filings() {
           ))}
         </tbody>
       </table>
+      <Empty show={rows.length === 0}>No filings recorded yet. After your CA files a return, record its ARN here to lock that period.</Empty>
     </>
   );
 }

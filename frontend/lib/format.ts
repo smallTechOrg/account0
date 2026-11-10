@@ -33,3 +33,17 @@ export function rs(paise: number | null | undefined): string {
   if (paise === null || paise === undefined) return "";
   return (paise / 100).toFixed(2);
 }
+
+/** Decimal rupee amount (e.g. GST offline-tool JSON "12345.5") -> Indian grouping without the symbol: "12,345.50". */
+export function inrPlain(rupees: number | string | null | undefined): string {
+  if (rupees === null || rupees === undefined || rupees === "" || Number.isNaN(Number(rupees))) return "—";
+  return inr(Math.round(Number(rupees) * 100)).replace("₹", "");
+}
+
+/** Financial-year labels ("2026-27") from `back` years ago to `fwd` years ahead of the current FY, newest first. */
+export function fyOptions(now: Date = new Date(), back = 4, fwd = 1): string[] {
+  const cur = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const out: string[] = [];
+  for (let y = cur + fwd; y >= cur - back; y--) out.push(`${y}-${String((y + 1) % 100).padStart(2, "0")}`);
+  return out;
+}

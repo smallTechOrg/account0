@@ -2,7 +2,7 @@
 import { Why } from "@/lib/Why";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { inr } from "@/lib/format";
+import { inr, inrPlain } from "@/lib/format";
 
 function lastMonth(): string {
   const d = new Date();
@@ -98,7 +98,7 @@ export default function Gst() {
               <h2>Table 13 — Documents issued</h2>
               <p>{g1.documentsIssued.count} documents, {g1.documentsIssued.from} … {g1.documentsIssued.to}. <span className="muted">{g1.documentsIssued.rule}</span></p>
               {g1.notes.map((n: string, i: number) => <div key={i} className="stub">{n}</div>)}
-              <div className="stub">The JSON follows the GST offline tool’s shape on a best-effort basis — import it into the offline tool to validate before uploading to the portal.</div>
+              <div className="assumed">The JSON follows the GST offline tool’s shape on a best-effort basis — import it into the offline tool to validate before uploading to the portal.</div>
             </>
           )}
         </div>
@@ -113,7 +113,7 @@ function Hsn({ rows }: { rows: any[] }) {
     <table>
       <thead><tr><th>HSN/SAC</th><th>Description</th><th className="num">Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
       <tbody>
-        {rows.map((r) => <tr key={r.num}><td>{r.hsn_sc}</td><td>{r.desc}</td><td className="num">{r.rt}%</td><td className="num">{Number(r.txval).toFixed(2)}</td><td className="num">{Number(r.iamt).toFixed(2)}</td><td className="num">{Number(r.camt).toFixed(2)}</td><td className="num">{Number(r.samt).toFixed(2)}</td></tr>)}
+        {rows.map((r) => <tr key={r.num}><td>{r.hsn_sc}</td><td>{r.desc}</td><td className="num">{r.rt}%</td><td className="num">{inrPlain(r.txval)}</td><td className="num">{inrPlain(r.iamt)}</td><td className="num">{inrPlain(r.camt)}</td><td className="num">{inrPlain(r.samt)}</td></tr>)}
         {rows.length === 0 && <tr><td colSpan={7} className="muted">None.</td></tr>}
       </tbody>
     </table>

@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from "react";
+import { ToastHost } from "@/lib/ToastHost";
 
 export const metadata = { title: "Account0", description: "Local-first back-office & compliance co-pilot" };
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <main>{children}</main>
+          <ToastHost />
         </div>
       </body>
     </html>
