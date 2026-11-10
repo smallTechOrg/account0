@@ -15,7 +15,38 @@ import java.util.*;
 @Service
 public class ComplianceService {
     private final JdbcTemplate jdbc; private final SettingsService settings; private final AuditService audit;
+    private final com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
     public ComplianceService(JdbcTemplate jdbc, SettingsService settings, AuditService audit) { this.jdbc = jdbc; this.settings = settings; this.audit = audit; }
+
+    /** Directors with the FY of their last DIR-3 KYC, stored as JSON in setting company.directors. */
+    public List<ComplianceCalendar.Director> directors() {
+        String j = settings.get("company.directors", "");
+        if (j.isBlank()) return List.of();
+        try {
+            List<ComplianceCalendar.Director> out = new ArrayList<>();
+            for (var n : om.readTree(j)) out.add(new ComplianceCalendar.Director(n.path("name").asText(""), n.path("din").asText(null), n.hasNonNull("lastKycFy") ? n.get("lastKycFy").asText() : null));
+            return out;
+        } catch (Exception e) { return List.of(); }
+    }
+    public List<ComplianceCalendar.Director> setDirectors(List<Map<String, Object>> in) {
+        List<Map<String, Object>> clean = new ArrayList<>();
+        for (Map<String, Object> d : in) {
+            String name = Objects.toString(d.get("name"), "").trim(), din = Objects.toString(d.get("din"), "").trim(), last = d.get("lastKycFy") == null ? null : d.get("lastKycFy").toString().trim();
+            if (name.isEmpty()) throw ApiException.bad("Each director needs a name.");
+            if (!din.isEmpty() && !din.matches("\\d{8}")) throw ApiException.bad("DIN must be 8 digits: " + din);
+            if (last != null && !last.isEmpty()) { try { ComplianceCalendar.startYear(last); } catch (IllegalArgumentException e) { throw ApiException.bad("lastKycFy must look like 2025-26"); } }
+            Map<String, Object> m = new LinkedHashMap<>(); m.put("name", name); m.put("din", din); m.put("lastKycFy", last == null || last.isEmpty() ? null : last); clean.add(m);
+        }
+        String old = settings.get("company.directors", "");
+        try { settings.set("company.directors", om.writeValueAsString(clean)); } catch (Exception e) { throw new IllegalStateException(e); }
+        audit.record("user", "setting", "company.directors", "update", "value", old, clean.toString(), "directors / DIR-3 KYC years");
+        return directors();
+    }
+    boolean exporter() {
+        if ("true".equalsIgnoreCase(settings.get("company.exports_under_lut", "false"))) return true;
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM invoice WHERE tenant_id=? AND status='CONFIRMED' AND supply_type IN ('EXPORT_LUT','SEZ_LUT')", Integer.class, Tenant.current());
+        return n != null && n > 0;
+    }
 
     public static String currentFy(LocalDate d) { int y = d.getMonthValue() >= 4 ? d.getYear() : d.getYear() - 1; return y + "-" + String.format("%02d", (y + 1) % 100); }
 
@@ -28,7 +59,7 @@ public class ComplianceService {
         String agm = settings.get("company.agm_date", "");
         LocalDate d = null;
         if (!agm.isBlank()) try { d = LocalDate.parse(agm); } catch (Exception ignored) {}
-        return new ComplianceCalendar.Options(d, "true".equalsIgnoreCase(settings.get("company.tax_audit", "false")));
+        return new ComplianceCalendar.Options(d, "true".equalsIgnoreCase(settings.get("company.tax_audit", "false")), exporter(), directors());
     }
 
     private boolean filed(String type, String period) {
@@ -49,7 +80,9 @@ public class ComplianceService {
 
     public Map<String, Object> calendar(String fy, LocalDate asOf) {
         List<ComplianceCalendar.Item> items;
-        try { items = ComplianceCalendar.generate(fy, options()); } catch (IllegalArgumentException e) { throw ApiException.bad(e.getMessage()); }
+        try { items = new ArrayList<>(ComplianceCalendar.generate(fy, options())); } catch (IllegalArgumentException e) { throw ApiException.bad(e.getMessage()); }
+        items.addAll(remittanceEvents(fy));
+        items.sort(Comparator.comparing(ComplianceCalendar.Item::due).thenComparing(ComplianceCalendar.Item::code));
         Map<String, Map<String, Object>> st = new HashMap<>();
         for (Map<String, Object> r : jdbc.queryForList("SELECT * FROM compliance_status WHERE tenant_id=?", Tenant.current())) st.put(r.get("code") + "|" + r.get("period"), r);
         boolean emp = hasEmployees();
@@ -80,6 +113,21 @@ public class ComplianceService {
         out.put("fy", fy); out.put("asOf", asOf.toString()); out.put("items", rows); out.put("counts", counts);
         out.put("agmDate", options().agmDate() == null ? null : options().agmDate().toString());
         out.put("assumptions", "Statutory dates for a monthly GST filer; governments often extend dates — verify on the portal. A calendar lists obligations by due date within the FY (so it includes last year's ROC/ITR filings).");
+        return out;
+    }
+
+    /** Event-based: Form 15CA (and 15CB from a CA where needed) must be filed BEFORE each remittance to a foreign vendor; one item per confirmed foreign purchase. */
+    List<ComplianceCalendar.Item> remittanceEvents(String fy) {
+        int y = ComplianceCalendar.startYear(fy);
+        List<ComplianceCalendar.Item> out = new ArrayList<>();
+        for (Map<String, Object> r : jdbc.queryForList("""
+                SELECT id, invoice_no, invoice_date, counterparty_name FROM invoice WHERE tenant_id=? AND status='CONFIRMED' AND direction='PURCHASE'
+                  AND (supply_type='IMPORT_SERVICE_RCM' OR (counterparty_country IS NOT NULL AND counterparty_country<>'' AND UPPER(counterparty_country) NOT IN ('INDIA','IN')))
+                  AND invoice_date>=? AND invoice_date<=? ORDER BY invoice_date, id""", Tenant.current(), y + "-04-01", (y + 1) + "-03-31"))
+            out.add(new ComplianceCalendar.Item("FORM15CA", "Form 15CA/15CB before paying " + r.get("counterparty_name") + " (" + r.get("invoice_no") + ")", "Income tax", "inv:" + r.get("id"),
+                    LocalDate.parse((String) r.get("invoice_date")), "15CA / 15CB", "Sec 195(6) Income-tax Act 1961 / s.397 Income-tax Act 2025; Rule 37BB",
+                    "File Form 15CA online (with a CA's certificate 15CB where required) before the bank remits the money abroad; banks ask for it. Penalty ₹1 lakh u/s 271-I if not furnished. Some payments are exempt from 15CA (Rule 37BB list) — check with your CA.",
+                    ComplianceCalendar.Applicability.IF_APPLICABLE));
         return out;
     }
 

@@ -30,7 +30,7 @@ seed = [
    "place_of_supply": "29", "supply_type": "DOMESTIC", "reverse_charge": 0, "itc_eligible": 1, "taxable_paise": 5000000, "igst_paise": 900000, "total_paise": 5900000, "category": "Expense: Cloud hosting",
    "lines": [{"description": "Hosting", "hsn_sac": "998315", "gst_rate": "18", "taxable_paise": 5000000, "igst_paise": 900000}]},
   {"direction": "PURCHASE", "invoice_no": "INV-2026-10-0091", "invoice_date": "2026-10-01", "counterparty_name": "Atlas Analytics, Inc.", "counterparty_country": "USA", "place_of_supply": "29",
-   "supply_type": "IMPORT_SERVICE_RCM", "reverse_charge": 1, "itc_eligible": 1, "taxable_paise": 10080000, "total_paise": 10080000, "category": "Expense: Software subscriptions",
+   "supply_type": "IMPORT_SERVICE_RCM", "reverse_charge": 1, "rcm_paid_on": "2026-10-01", "itc_eligible": 1, "taxable_paise": 10080000, "total_paise": 10080000, "category": "Expense: Software subscriptions",
    "lines": [{"description": "Seats", "hsn_sac": "998316", "gst_rate": "18", "taxable_paise": 10080000}]},
 ]
 ids = []
@@ -46,7 +46,7 @@ for s in seed:
 AS_OF = "2026-11-10"
 cal = call("GET", f"/api/compliance/calendar?fy=2026-27&asOf={AS_OF}")
 I = {(i["code"], i["period"]): i for i in cal["items"]}
-check(len(cal["items"]) == 85, "FY 2026-27 calendar has 85 obligations")
+check(len(cal["items"]) == 94, "FY 2026-27 calendar has 94 obligations (85 + Form 144 x4, GSTR-9C, LUT, MSME-1 x2 + one 15CA event for the US vendor)")
 check(I[("GSTR3B", "2026-10")]["due"] == "2026-11-20" and I[("GSTR1", "2026-10")]["due"] == "2026-11-11", "GSTR-1 on the 11th, GSTR-3B on the 20th")
 check(I[("TDS_DEPOSIT", "2026-03")]["due"] == "2026-04-30" and I[("TDS_DEPOSIT", "2026-09")]["due"] == "2026-10-07", "TDS deposit 7th (30 April for March)")
 check(I[("TDS_26Q", "2026-27-Q2")]["due"] == "2026-10-31" and I[("ITR6", "FY2025-26")]["due"] == "2026-10-31", "26Q Q2 and ITR-6 on 31 Oct")

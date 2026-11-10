@@ -23,6 +23,10 @@ public class ComplianceController {
     @PostMapping("/compliance/catch-up")
     public Map<String, Object> catchUp(@RequestBody Map<String, String> b) { return svc.catchUp(b.get("fy"), date(b.get("before"))); }
 
+    @GetMapping("/compliance/directors") public java.util.List<ComplianceCalendar.Director> directors() { return svc.directors(); }
+    @PutMapping("/compliance/directors")
+    public java.util.List<ComplianceCalendar.Director> setDirectors(@RequestBody java.util.List<Map<String, Object>> b) { return svc.setDirectors(b); }
+
     @GetMapping("/close/{period}") public Map<String, Object> checklist(@PathVariable String period) { return close.checklist(period); }
     @PostMapping("/close/{period}/tick")
     public Map<String, Object> tick(@PathVariable String period, @RequestBody Map<String, String> b) { return close.tick(period, b.get("key"), b.get("state"), b.get("note")); }

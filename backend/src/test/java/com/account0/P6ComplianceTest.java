@@ -24,7 +24,7 @@ class P6ComplianceTest {
 
     @Test void calendarDatesHandChecked() {
         var l = ComplianceCalendar.generate("2026-27", new ComplianceCalendar.Options(null, false));
-        assertThat(l).hasSize(85);
+        assertThat(l).hasSize(93);   // + Form 144/27Q x4, GSTR-9C, LUT renewal, MSME Form-1 x2 (audit #13)
         assertThat(find(l, "GSTR1", "2026-10").get().due()).isEqualTo(LocalDate.of(2026, 11, 11));
         assertThat(find(l, "GSTR3B", "2026-10").get().due()).isEqualTo(LocalDate.of(2026, 11, 20));
         assertThat(find(l, "GSTR3B", "2027-02").get().due()).isEqualTo(LocalDate.of(2027, 3, 20));
@@ -38,7 +38,29 @@ class P6ComplianceTest {
         assertThat(find(l, "ITR6", "FY2025-26").get().due()).isEqualTo(LocalDate.of(2026, 10, 31));
         assertThat(find(l, "AOC4", "FY2025-26").get().due()).isEqualTo(LocalDate.of(2026, 10, 30));       // default AGM 30 Sep + 30
         assertThat(find(l, "MGT7A", "FY2025-26").get().due()).isEqualTo(LocalDate.of(2026, 11, 29));
-        assertThat(find(l, "DIR3KYC", "FY2025-26").get().due()).isEqualTo(LocalDate.of(2026, 9, 30));
+        // audit #10: from FY 2026-27 DIR-3 KYC is due by 30 June, once every 3 FYs (G.S.R. 943(E)); unknown directors -> "if applicable"
+        assertThat(find(l, "DIR3KYC", "FY2026-27").get().due()).isEqualTo(LocalDate.of(2026, 6, 30));
+        assertThat(find(l, "DIR3KYC", "FY2026-27").get().applicability()).isEqualTo(ComplianceCalendar.Applicability.IF_APPLICABLE);
+        assertThat(find(ComplianceCalendar.generate("2025-26", new ComplianceCalendar.Options(null, false)), "DIR3KYC", "FY2024-25").get().due()).isEqualTo(LocalDate.of(2025, 9, 30));  // old annual rule
+        var dirs = List.of(new ComplianceCalendar.Director("A", "01234567", "2023-24"), new ComplianceCalendar.Director("B", "07654321", "2025-26"));
+        var withDirs = ComplianceCalendar.generate("2026-27", new ComplianceCalendar.Options(null, false, true, dirs));
+        assertThat(find(withDirs, "DIR3KYC", "FY2026-27-01234567").get().due()).isEqualTo(LocalDate.of(2026, 6, 30));   // 2023-24 + 3 = 2026-27
+        assertThat(find(withDirs, "DIR3KYC", "FY2026-27-07654321")).isEmpty();                                          // next due FY 2028-29
+        assertThat(find(ComplianceCalendar.generate("2028-29", new ComplianceCalendar.Options(null, false, true, dirs)), "DIR3KYC", "FY2028-29-07654321").get().due()).isEqualTo(LocalDate.of(2028, 6, 30));
+        // audit #12: FY-aware form names (Q4 FY 2025-26 keeps 26Q; FY 2026-27 quarters are Form 140; Form 16 for FY 2025-26 keeps its name)
+        assertThat(find(l, "TDS_26Q", "2025-26-Q4").get().form()).isEqualTo("Form 26Q");
+        assertThat(find(l, "TDS_26Q", "2026-27-Q2").get().form()).startsWith("Form 140");
+        assertThat(find(l, "TDS_24Q", "2026-27-Q2").get().form()).startsWith("Form 138");
+        assertThat(find(l, "FORM16A", "2026-27-Q1").get().form()).startsWith("Form 131");
+        assertThat(find(l, "FORM16", "FY2025-26").get().form()).isEqualTo("Form 16");
+        assertThat(find(ComplianceCalendar.generate("2027-28", new ComplianceCalendar.Options(null, false)), "FORM16", "FY2026-27").get().form()).startsWith("Form 130");
+        // audit #13: new items
+        assertThat(find(withDirs, "LUT_RFD11", "FY2027-28").get().due()).isEqualTo(LocalDate.of(2027, 3, 31));
+        assertThat(find(withDirs, "LUT_RFD11", "FY2027-28").get().applicability()).isEqualTo(ComplianceCalendar.Applicability.ALWAYS);   // exporter
+        assertThat(find(l, "TDS_27Q", "2026-27-Q1").get().due()).isEqualTo(LocalDate.of(2026, 7, 31));
+        assertThat(find(l, "MSME1", "FY2025-26-H2").get().due()).isEqualTo(LocalDate.of(2026, 4, 30));
+        assertThat(find(l, "MSME1", "FY2026-27-H1").get().due()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(find(l, "GSTR9C", "FY2025-26").get().due()).isEqualTo(LocalDate.of(2026, 12, 31));
         assertThat(l.stream().filter(i -> i.code().equals("ADVANCE_TAX")).map(ComplianceCalendar.Item::due).toList())
                 .containsExactlyInAnyOrder(LocalDate.of(2026, 6, 15), LocalDate.of(2026, 9, 15), LocalDate.of(2026, 12, 15), LocalDate.of(2027, 3, 15));
         var agm = ComplianceCalendar.generate("2026-27", new ComplianceCalendar.Options(LocalDate.of(2026, 9, 15), true));
