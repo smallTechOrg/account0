@@ -118,7 +118,7 @@ public class ScrutinyService {
         Map<String, Map<String, Long>> books = Gstr3bFigures.fromComputed(g3);
         Map<String, List<Map<String, Object>>> sources = new HashMap<>();
         for (String t : List.of("table31", "table4")) for (Map<String, Object> fg : (List<Map<String, Object>>) g3.get(t)) sources.put((String) fg.get("key"), (List<Map<String, Object>>) fg.get("sources"));
-        Long itc2b = jdbc.queryForObject("SELECT CASE WHEN COUNT(*)=0 THEN NULL ELSE SUM(igst_paise+cgst_paise+sgst_paise+cess_paise) END FROM gstr2b_doc WHERE tenant_id=? AND period=? AND itc_available=1 AND reverse_charge=0", Long.class, Tenant.current(), period);
+        Long itc2b = jdbc.queryForObject("SELECT CASE WHEN COUNT(*)=0 THEN NULL ELSE SUM((CASE WHEN doc_type='CREDIT_NOTE' THEN -1 ELSE 1 END)*(igst_paise+cgst_paise+sgst_paise+cess_paise)) END FROM gstr2b_doc WHERE tenant_id=? AND period=? AND itc_available=1 AND reverse_charge=0 AND section IN ('B2B','B2BA','CDNR')", Long.class, Tenant.current(), period);
         List<ScrutinyEngine.Row> rows = ScrutinyEngine.diff(filed, books);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("filedReturn", Map.of("id", id, "period", period, "source", fr.get("source"), "confirmed", fr.get("confirmed"), "document_id", Objects.toString(fr.get("document_id"), "")));

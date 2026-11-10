@@ -7,8 +7,24 @@ public final class ItcMatcher {
     private ItcMatcher() {}
     public static final long TOL = 100; // ₹1
 
-    public record Book(long id, String ctin, String invNo, long taxPaise) {}
-    public record Doc(long id, String ctin, String docNo, long taxPaise) {}
+    /** heads = {IGST, CGST, SGST, Cess} in paise (null = compare the total only); kind = INVOICE | CREDIT_NOTE | DEBIT_NOTE. */
+    public record Book(long id, String ctin, String invNo, long taxPaise, String kind, long[] heads) {
+        public Book(long id, String ctin, String invNo, long taxPaise) { this(id, ctin, invNo, taxPaise, "INVOICE", null); }
+    }
+    public record Doc(long id, String ctin, String docNo, long taxPaise, String kind, long[] heads) {
+        public Doc(long id, String ctin, String docNo, long taxPaise) { this(id, ctin, docNo, taxPaise, "INVOICE", null); }
+    }
+    static final String[] HEAD_NAMES = {"IGST", "CGST", "SGST", "Cess"};
+    /** null when every head agrees within ₹1; else a description of the first difference. */
+    static String headDiff(Doc d, Book b) {
+        if (d.heads() != null && b.heads() != null) {
+            for (int i = 0; i < 4; i++) if (Math.abs(d.heads()[i] - b.heads()[i]) > TOL)
+                return HEAD_NAMES[i] + " in 2B is " + (d.heads()[i] / 100.0) + " but your books show " + (b.heads()[i] / 100.0) + " (each tax head must agree — e.g. IGST charged instead of CGST+SGST).";
+            return null;
+        }
+        return Math.abs(d.taxPaise() - b.taxPaise()) <= TOL ? null : "Tax in 2B is " + (d.taxPaise() / 100.0) + " but your books show " + (b.taxPaise() / 100.0) + ".";
+    }
+    static boolean sameKind(Doc d, Book b) { return Objects.equals(d.kind(), b.kind()); }
     /** status: MATCHED | AMOUNT_MISMATCH | POSSIBLE_MATCH | IN_2B_NOT_IN_BOOKS | IN_BOOKS_NOT_IN_2B */
     public record Result(String status, Long docId, Long bookId, String note) {}
 
@@ -25,10 +41,9 @@ public final class ItcMatcher {
         // pass 1: exact on GSTIN + normalised invoice number
         for (Doc d : docs) for (Book b : books) {
             if (usedBooks.contains(b.id())) continue;
-            if (normGstin(d.ctin()).equals(normGstin(b.ctin())) && norm(d.docNo()).equals(norm(b.invNo()))) {
-                boolean ok = Math.abs(d.taxPaise() - b.taxPaise()) <= TOL;
-                out.add(new Result(ok ? "MATCHED" : "AMOUNT_MISMATCH", d.id(), b.id(),
-                        ok ? "GSTIN, invoice no and tax agree." : "Tax in 2B is " + (d.taxPaise() / 100.0) + " but your books show " + (b.taxPaise() / 100.0) + "."));
+            if (sameKind(d, b) && normGstin(d.ctin()).equals(normGstin(b.ctin())) && norm(d.docNo()).equals(norm(b.invNo()))) {
+                String diff = headDiff(d, b);
+                out.add(new Result(diff == null ? "MATCHED" : "AMOUNT_MISMATCH", d.id(), b.id(), diff == null ? "GSTIN, document no and every tax head agree." : diff));
                 usedBooks.add(b.id()); usedDocs.add(d.id()); break;
             }
         }
@@ -37,7 +52,7 @@ public final class ItcMatcher {
             if (usedDocs.contains(d.id())) continue;
             for (Book b : books) {
                 if (usedBooks.contains(b.id())) continue;
-                if (normGstin(d.ctin()).equals(normGstin(b.ctin())) && Math.abs(d.taxPaise() - b.taxPaise()) <= TOL && similar(norm(d.docNo()), norm(b.invNo()))) {
+                if (sameKind(d, b) && normGstin(d.ctin()).equals(normGstin(b.ctin())) && headDiff(d, b) == null && similar(norm(d.docNo()), norm(b.invNo()))) {
                     out.add(new Result("POSSIBLE_MATCH", d.id(), b.id(), "Same vendor and tax amount, but invoice numbers differ (" + d.docNo() + " in 2B vs " + b.invNo() + " in books). Confirm and ask the vendor to correct."));
                     usedBooks.add(b.id()); usedDocs.add(d.id()); break;
                 }

@@ -1,6 +1,7 @@
 package com.account0.gst;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,8 @@ public class Figure {
     public final String key, label, rule, ref;
     public long taxable, igst, cgst, sgst, cess;
     public final List<Map<String, Object>> sources = new ArrayList<>();
+    /** Optional: e.g. "PROVISIONAL" with a caveat shown next to the figure (null = final). */
+    public String status, caveat;
 
     public Figure(String key, String label, String rule, String ref) { this.key = key; this.label = label; this.rule = rule; this.ref = ref; }
 
@@ -21,7 +24,10 @@ public class Figure {
     public long tax() { return igst + cgst + sgst + cess; }
 
     public Map<String, Object> toMap() {
-        return Map.of("key", key, "label", label, "rule", rule, "ref", ref, "taxable_paise", taxable, "igst_paise", igst, "cgst_paise", cgst,
-                "sgst_paise", sgst, "cess_paise", cess, "sources", sources);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", key); m.put("label", label); m.put("rule", rule); m.put("ref", ref); m.put("taxable_paise", taxable); m.put("igst_paise", igst);
+        m.put("cgst_paise", cgst); m.put("sgst_paise", sgst); m.put("cess_paise", cess); m.put("sources", sources);
+        if (status != null) { m.put("status", status); m.put("caveat", caveat); }
+        return m;
     }
 }

@@ -39,7 +39,7 @@ public final class InvoiceChecks {
         long expectTotal = rcm ? taxable + cess : taxable + cg + sg + ig + cess;
         if (Math.abs(expectTotal - total) > TOLERANCE_PAISE)
             f.add(Flag.error("total_paise", "TOTAL_MISMATCH", String.format("Taxable + taxes = %s but invoice total is %s.", rs(expectTotal), rs(total))));
-        if (cg != sg) f.add(Flag.error("cgst_paise", "CGST_NE_SGST", "CGST and SGST must be equal."));
+        if (Math.abs(cg - sg) > 1) f.add(Flag.error("cgst_paise", "CGST_NE_SGST", "CGST and SGST must be equal (1 paisa rounding allowed)."));
         if ((cg > 0 || sg > 0) && ig > 0) f.add(Flag.error("igst_paise", "MIXED_HEADS", "An invoice cannot have both CGST/SGST and IGST."));
         if (!lines.isEmpty()) {
             long lt = lines.stream().mapToLong(x -> l(x.get("taxable_paise"))).sum();
@@ -50,6 +50,8 @@ public final class InvoiceChecks {
                 String rate = s(x.get("gst_rate"));
                 if (rate != null && !SupplyType.RATES.contains(stripZeros(rate)))
                     f.add(Flag.error("lines", "RATE_NOT_SLAB", "Line " + x.get("line_no") + ": rate " + rate + "% is not a GST slab."));
+                else if (rate != null && SupplyType.PRE_GST2_RATES.contains(stripZeros(rate)) && d != null && d.compareTo(SupplyType.GST2_FROM) >= 0)
+                    f.add(Flag.warn("lines", "RATE_PRE_GST2", "Line " + x.get("line_no") + ": " + stripZeros(rate) + "% was removed by the GST 2.0 rate rationalisation from 22 Sep 2025 (slabs now 5/18/40). Check the rate for this " + d + " invoice — usually 5% or 18%."));
                 long lx = l(x.get("taxable_paise")), tx = l(x.get("cgst_paise")) + l(x.get("sgst_paise")) + l(x.get("igst_paise"));
                 if (rate != null && lx > 0 && !rcm && tx > 0) {
                     long expect = new BigDecimal(lx).multiply(new BigDecimal(rate)).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP).longValue();
@@ -90,6 +92,13 @@ public final class InvoiceChecks {
         if ((t == SupplyType.EXPORT_LUT || t == SupplyType.EXPORT_PAID) && inv.get("place_of_supply") != null && !"96".equals(inv.get("place_of_supply")))
             f.add(Flag.warn("place_of_supply", "EXPORT_POS", "Exports normally have place of supply 96 (Other Country)."));
         if (t.isRcm() && tax == 0) f.add(Flag.error("igst_paise", "RCM_TAX_MISSING", "Reverse-charge tax is zero. Enter the GST rate on the lines and click 'Compute RCM tax'."));
+        if (t.isRcm() && "PURCHASE".equals(dir) && s(inv.get("rcm_paid_on")) == null && s(inv.get("rcm_bank_paid_on")) == null && inv.get("invoice_date") != null) {
+            String tos;
+            try { tos = LocalDate.parse(s(inv.get("invoice_date"))).plusDays(61).toString(); } catch (Exception e) { tos = "invoice date + 61 days"; }
+            f.add(Flag.warn("rcm_paid_on", "RCM_TOS_UNPAID", "Reverse charge: no payment date given (and none matched from the bank). Time of supply is the earlier of payment and the day after 60 days from the invoice date (Sec 13(3)), so the tax is due in the 3B for the month of " + tos + " unless you enter the date you paid."));
+        }
+        if (t.isRcm() && inv.get("currency") != null && !"INR".equalsIgnoreCase(s(inv.get("currency"))))
+            f.add(Flag.info("fx_rate", "RCM_FX_RULE34", "Foreign-currency RCM: the taxable value uses the exchange rate on the time-of-supply date (Rule 34 CGST Rules; Sec 14 Customs Act rate). Check the rate entered."));
         if (inv.get("category") == null) f.add(Flag.warn("category", "NO_CATEGORY", "No category / ledger head chosen."));
         return f;
     }

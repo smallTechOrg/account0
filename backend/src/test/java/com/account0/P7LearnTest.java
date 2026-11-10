@@ -81,7 +81,7 @@ class P7LearnTest {
     @Test void walkthroughsUseYourNumbersAndDiy() {
         rest.exchange("/api/company", HttpMethod.PUT, new HttpEntity<>(Map.of("legal_name", FixtureGenerator.OUR_NAME, "gstin", FixtureGenerator.OUR_GSTIN)), Map.class);
         seed(TestSupport.map("direction", "PURCHASE", "invoice_no", "INV-2026-10-0091", "invoice_date", "2026-10-01", "counterparty_name", "Atlas Analytics", "counterparty_country", "USA", "place_of_supply", "29",
-                "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "itc_eligible", 1, "taxable_paise", 10080000, "total_paise", 10080000, "category", "Expense",
+                "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "rcm_paid_on", "2026-10-01", "itc_eligible", 1, "taxable_paise", 10080000, "total_paise", 10080000, "category", "Expense",
                 "lines", List.of(Map.of("description", "Seats", "hsn_sac", "998316", "gst_rate", "18", "taxable_paise", 10080000))), true);
         Map<String, Object> w = rest.getForObject("/api/learn/walkthrough/rcm?period=2026-10", Map.class);
         assertThat(w.get("empty")).isEqualTo(false);

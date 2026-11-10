@@ -67,7 +67,7 @@ class P3ScrutinyTest {
                 "place_of_supply", "29", "supply_type", "DOMESTIC", "reverse_charge", 0, "itc_eligible", 1, "taxable_paise", 5000000, "igst_paise", 900000, "total_paise", 5900000, "category", "Expense",
                 "lines", List.of(Map.of("description", "Hosting", "hsn_sac", "998315", "gst_rate", "18", "taxable_paise", 5000000, "igst_paise", 900000))), false);
         seed(TestSupport.map("direction", "PURCHASE", "invoice_no", "ATL-9", "invoice_date", "2026-10-01", "counterparty_name", "Atlas Analytics", "counterparty_country", "USA", "place_of_supply", "29",
-                "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "itc_eligible", 1, "taxable_paise", 10000000, "total_paise", 10000000, "category", "Expense",
+                "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "rcm_paid_on", "2026-10-01", "itc_eligible", 1, "taxable_paise", 10000000, "total_paise", 10000000, "category", "Expense",
                 "lines", List.of(Map.of("description", "Seats", "hsn_sac", "998316", "gst_rate", "18", "taxable_paise", 10000000))), true);
 
         // CA's filed 3B (portal shape): RCM omitted, ITC overclaimed (4A5 = 12,000 vs 9,000 in books)

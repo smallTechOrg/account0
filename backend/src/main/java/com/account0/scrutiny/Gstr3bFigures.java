@@ -15,7 +15,7 @@ public final class Gstr3bFigures {
         LINES.put("3.1a", "3.1(a) Outward taxable supplies"); LINES.put("3.1b", "3.1(b) Zero-rated supplies"); LINES.put("3.1c", "3.1(c) Nil/exempt supplies");
         LINES.put("3.1d", "3.1(d) Inward supplies liable to reverse charge"); LINES.put("3.1e", "3.1(e) Non-GST outward supplies");
         LINES.put("4A1", "4A(1) ITC — import of goods"); LINES.put("4A2", "4A(2) ITC — import of services"); LINES.put("4A3", "4A(3) ITC — inward RCM (other)");
-        LINES.put("4A5", "4A(5) ITC — all other"); LINES.put("4B1", "4B(1) ITC reversed (Rules 38/42/43, Sec 17(5))"); LINES.put("4C", "4C Net ITC available");
+        LINES.put("4A4", "4A(4) ITC — inward supplies from ISD"); LINES.put("4A5", "4A(5) ITC — all other"); LINES.put("4B1", "4B(1) ITC reversed (Rules 38/42/43, Sec 17(5))"); LINES.put("4C", "4C Net ITC available");
     }
 
     static long p(JsonNode n, String k) {
@@ -37,8 +37,8 @@ public final class Gstr3bFigures {
         f.put("3.1a", heads(sup.get("osup_det"))); f.put("3.1b", heads(sup.get("osup_zero"))); f.put("3.1c", heads(sup.get("osup_nil_exmp")));
         f.put("3.1d", heads(sup.get("isup_rev"))); f.put("3.1e", heads(sup.get("osup_nongst")));
         JsonNode itc = j.path("itc_elg");
-        Map<String, String> avl = Map.of("IMPG", "4A1", "IMPS", "4A2", "ISRC", "4A3", "OTH", "4A5");
-        for (String k : List.of("4A1", "4A2", "4A3", "4A5", "4B1")) f.put(k, zero());
+        Map<String, String> avl = Map.of("IMPG", "4A1", "IMPS", "4A2", "ISRC", "4A3", "ISD", "4A4", "OTH", "4A5");
+        for (String k : List.of("4A1", "4A2", "4A3", "4A4", "4A5", "4B1")) f.put(k, zero());
         for (JsonNode a : itc.path("itc_avl")) { String k = avl.get(a.path("ty").asText()); if (k != null) f.put(k, heads(a)); }
         for (JsonNode a : itc.path("itc_rev")) if ("RUL".equals(a.path("ty").asText())) f.put("4B1", heads(a));
         f.put("4C", heads(itc.get("itc_net")));

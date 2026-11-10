@@ -25,7 +25,7 @@ import java.util.*;
 public class InvoiceService {
     public static final List<String> HEADER_FIELDS = List.of("direction", "doc_type", "invoice_no", "invoice_date", "counterparty_name", "counterparty_gstin",
             "counterparty_country", "place_of_supply", "supply_type", "reverse_charge", "itc_eligible", "currency", "foreign_amount", "fx_rate",
-            "taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "cess_paise", "total_paise", "category", "original_invoice_no", "notes");
+            "taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "cess_paise", "total_paise", "category", "original_invoice_no", "notes", "rcm_paid_on", "nil_type", "buyer_kind");
     static final List<String> LINE_FIELDS = List.of("description", "hsn_sac", "uqc", "quantity", "gst_rate", "taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "cess_paise");
     static final Set<String> NUMERIC = Set.of("taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "cess_paise", "total_paise", "reverse_charge", "itc_eligible");
     private static final Set<String> TREATMENT = Set.of("supply_type", "reverse_charge", "itc_eligible");
@@ -98,6 +98,11 @@ public class InvoiceService {
         if (r.isEmpty()) throw ApiException.notFound("invoice " + id);
         Map<String, Object> inv = new LinkedHashMap<>(r.get(0));
         inv.put("lines", lines(id));
+        if (inv.get("reverse_charge") instanceof Number rc && rc.intValue() == 1) {
+            List<String> bank = jdbc.queryForList("SELECT MIN(txn_date) FROM bank_txn WHERE tenant_id=? AND matched_invoice_id=? AND status='MATCHED' AND debit_paise>0", String.class, Tenant.current(), id);
+            inv.put("rcm_bank_paid_on", bank.isEmpty() ? null : bank.get(0));
+            inv.put("rcm_tos_date", rcmTos((String) inv.get("invoice_date"), (String) inv.get("rcm_paid_on"), (String) inv.get("rcm_bank_paid_on")));
+        }
         inv.put("flags", parseFlags((String) inv.remove("flags_json")));
         List<Flag> live = liveChecks(inv);
         inv.put("checks", live);
@@ -187,7 +192,11 @@ public class InvoiceService {
             if (m.get("gst_rate") == null) throw ApiException.bad("Line " + m.get("line_no") + " has no GST rate. Enter the rate you have confirmed applies.");
             long tx = InvoiceChecks.l(m.get("taxable_paise"));
             long tax = new BigDecimal(tx).multiply(new BigDecimal((String) m.get("gst_rate"))).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP).longValue();
-            if (intra) { long half = tax / 2; m.put("cgst_paise", half); m.put("sgst_paise", tax - half); m.put("igst_paise", 0); cg += half; sg += tax - half; }
+            if (intra) {
+                // each half computed on its own (rate/2), so CGST = SGST exactly (a tax/2 split gave 1-paisa differences)
+                long half = new BigDecimal(tx).multiply(new BigDecimal((String) m.get("gst_rate"))).divide(BigDecimal.valueOf(200), 0, RoundingMode.HALF_UP).longValue();
+                m.put("cgst_paise", half); m.put("sgst_paise", half); m.put("igst_paise", 0); cg += half; sg += half;
+            }
             else { m.put("igst_paise", tax); m.put("cgst_paise", 0); m.put("sgst_paise", 0); ig += tax; }
             taxable += tx;
             ls.add(m);
@@ -266,6 +275,15 @@ public class InvoiceService {
         return get(id);
     }
 
+    /** Sec 13(3) CGST Act: RCM time of supply = earlier of the payment date and the date immediately after 60 days from the invoice date. */
+    public static String rcmTos(String invoiceDate, String paidOn, String bankPaidOn) {
+        if (invoiceDate == null) return null;
+        String t;
+        try { t = LocalDate.parse(invoiceDate).plusDays(61).toString(); } catch (Exception e) { return null; }
+        for (String p : new String[]{paidOn, bankPaidOn}) if (p != null && p.compareTo(t) < 0) t = p;
+        return t;
+    }
+
     // ---------- helpers ----------
     static String period(String date) { return date != null && date.length() >= 7 && date.matches("\\d{4}-\\d{2}.*") ? date.substring(0, 7) : null; }
 
@@ -281,6 +299,9 @@ public class InvoiceService {
             if (f.equals("supply_type") && x != null) {
                 try { SupplyType.valueOf(x.toString()); } catch (Exception e) { throw ApiException.bad("unknown supply_type " + x); }
             }
+            if (f.equals("rcm_paid_on") && x != null && !x.toString().matches("\\d{4}-\\d{2}-\\d{2}")) throw ApiException.bad("rcm_paid_on must be YYYY-MM-DD");
+            if (f.equals("nil_type") && x != null && !List.of("NIL", "EXEMPT").contains(x)) throw ApiException.bad("nil_type must be NIL or EXEMPT");
+            if (f.equals("buyer_kind") && x != null && !List.of("REGULAR", "COMPOSITION", "UIN").contains(x)) throw ApiException.bad("buyer_kind must be REGULAR, COMPOSITION or UIN");
             if (f.equals("direction") && x != null && !List.of("SALE", "PURCHASE").contains(x)) throw ApiException.bad("direction must be SALE or PURCHASE");
             v.put(f, x);
         }

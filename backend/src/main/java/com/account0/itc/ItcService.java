@@ -31,7 +31,7 @@ public class ItcService {
         try { return LocalDate.parse(d, DateTimeFormatter.ofPattern("dd-MM-yyyy")).toString(); } catch (Exception e) { return d; }
     }
 
-    /** Imports a GSTR-2B JSON as downloaded from the portal (b2b + cdnr). Replaces any earlier import for the same period. */
+    /** Imports a GSTR-2B JSON as downloaded from the portal (b2b, b2ba, cdnr, isd, impg). Replaces any earlier import for the same period. */
     public Map<String, Object> importJson(byte[] bytes, String filename) {
         JsonNode root;
         try { root = om.readTree(bytes); } catch (Exception e) { throw ApiException.bad("Not valid JSON: " + e.getMessage()); }
@@ -49,6 +49,20 @@ public class ItcService {
         int n = 0;
         for (JsonNode s : dd.path("b2b")) for (JsonNode inv : s.path("inv")) { insertDoc(imp, period, "B2B", s, inv.path("inum").asText(), inv, "INVOICE"); n++; }
         for (JsonNode s : dd.path("cdnr")) for (JsonNode nt : s.path("nt")) { insertDoc(imp, period, "CDNR", s, nt.path("ntnum").asText(), nt, "C".equals(nt.path("typ").asText()) ? "CREDIT_NOTE" : "DEBIT_NOTE"); n++; }
+        // amended invoices: the amended version is what counts (matched like an invoice, on its new number)
+        for (JsonNode s : dd.path("b2ba")) for (JsonNode inv : s.path("inv")) { insertDoc(imp, period, "B2BA", s, inv.path("inum").asText(inv.path("oinum").asText()), inv, "INVOICE"); n++; }
+        // ISD credit (4A(4)) and import of goods (4A(1)) have no purchase invoice to match
+        for (JsonNode s : dd.path("isd")) for (JsonNode doc : s.path("doclist")) {
+            com.fasterxml.jackson.databind.node.ObjectNode x = doc.deepCopy();
+            if (doc.has("docdt")) x.put("dt", doc.get("docdt").asText());
+            if (doc.has("itcelg")) x.put("itcavl", doc.get("itcelg").asText());
+            insertDoc(imp, period, "ISD", s, doc.path("docnum").asText(), x, "ISDC".equalsIgnoreCase(doc.path("doctyp").asText()) || "C".equalsIgnoreCase(doc.path("doctyp").asText()) ? "CREDIT_NOTE" : "INVOICE"); n++;
+        }
+        for (JsonNode boe : dd.path("impg")) {
+            com.fasterxml.jackson.databind.node.ObjectNode x = boe.deepCopy(); x.put("dt", boe.path("boedt").asText(null));
+            com.fasterxml.jackson.databind.node.ObjectNode sup = om.createObjectNode(); sup.put("ctin", "CUSTOMS:" + boe.path("portcd").asText("")); sup.put("trdnm", "Customs (Bill of Entry)");
+            insertDoc(imp, period, "IMPG", sup, boe.path("boenum").asText(), x, "INVOICE"); n++;
+        }
         List<Map<String, Object>> res = match(period);
         return Map.of("importId", imp, "period", period, "documents", n, "summary", summary(res));
     }
@@ -67,16 +81,19 @@ public class ItcService {
 
     /** Runs the matcher for a period and persists status on each 2B doc. Returns result rows (both sides). */
     public List<Map<String, Object>> match(String period) {
-        List<Map<String, Object>> docRows = jdbc.queryForList("SELECT * FROM gstr2b_doc WHERE tenant_id=? AND period=? AND reverse_charge=0 AND doc_type='INVOICE'", Tenant.current(), period);
+        List<Map<String, Object>> docRows = jdbc.queryForList("SELECT * FROM gstr2b_doc WHERE tenant_id=? AND period=? AND reverse_charge=0 AND section IN ('B2B','B2BA','CDNR')", Tenant.current(), period);
         // books: confirmed non-RCM purchases with a GSTIN (any period — an invoice can show up in a later month's 2B)
         List<Map<String, Object>> bookRows = jdbc.queryForList("""
-                SELECT id, invoice_no, counterparty_gstin, counterparty_name, invoice_date, period, igst_paise+cgst_paise+sgst_paise+cess_paise AS tax, taxable_paise, itc_eligible
-                FROM invoice WHERE tenant_id=? AND status='CONFIRMED' AND direction='PURCHASE' AND doc_type='INVOICE' AND COALESCE(reverse_charge,0)=0
+                SELECT id, invoice_no, counterparty_gstin, counterparty_name, invoice_date, period, igst_paise+cgst_paise+sgst_paise+cess_paise AS tax, taxable_paise, itc_eligible,
+                  doc_type, igst_paise, cgst_paise, sgst_paise, cess_paise
+                FROM invoice WHERE tenant_id=? AND status='CONFIRMED' AND direction='PURCHASE' AND COALESCE(reverse_charge,0)=0
                   AND counterparty_gstin IS NOT NULL AND counterparty_gstin<>'' AND (period=? OR period<?)""", Tenant.current(), period, period);
         List<ItcMatcher.Doc> docs = docRows.stream().map(r -> new ItcMatcher.Doc(((Number) r.get("id")).longValue(), (String) r.get("ctin"), (String) r.get("doc_no"),
-                ((Number) r.get("igst_paise")).longValue() + ((Number) r.get("cgst_paise")).longValue() + ((Number) r.get("sgst_paise")).longValue() + ((Number) r.get("cess_paise")).longValue())).toList();
+                ((Number) r.get("igst_paise")).longValue() + ((Number) r.get("cgst_paise")).longValue() + ((Number) r.get("sgst_paise")).longValue() + ((Number) r.get("cess_paise")).longValue(),
+                (String) r.get("doc_type"), heads(r))).toList();
         // earlier-period invoices only participate if matched to a 2B doc (otherwise they belong to that earlier month's check)
-        List<ItcMatcher.Book> books = bookRows.stream().map(r -> new ItcMatcher.Book(((Number) r.get("id")).longValue(), (String) r.get("counterparty_gstin"), (String) r.get("invoice_no"), ((Number) r.get("tax")).longValue())).toList();
+        List<ItcMatcher.Book> books = bookRows.stream().map(r -> new ItcMatcher.Book(((Number) r.get("id")).longValue(), (String) r.get("counterparty_gstin"), (String) r.get("invoice_no"), ((Number) r.get("tax")).longValue(),
+                (String) r.get("doc_type"), heads(r))).toList();
         Map<Long, Map<String, Object>> byBook = new HashMap<>(), byDoc = new HashMap<>();
         bookRows.forEach(r -> byBook.put(((Number) r.get("id")).longValue(), r)); docRows.forEach(r -> byDoc.put(((Number) r.get("id")).longValue(), r));
         List<Map<String, Object>> out = new ArrayList<>();
@@ -98,6 +115,10 @@ public class ItcService {
             out.add(row);
         }
         return out;
+    }
+
+    static long[] heads(Map<String, Object> r) {
+        return new long[]{((Number) r.get("igst_paise")).longValue(), ((Number) r.get("cgst_paise")).longValue(), ((Number) r.get("sgst_paise")).longValue(), ((Number) r.get("cess_paise")).longValue()};
     }
 
     static Map<String, Object> summary(List<Map<String, Object>> rows) {

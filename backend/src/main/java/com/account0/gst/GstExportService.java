@@ -30,7 +30,14 @@ public class GstExportService {
         this.gst = gst; this.ledger = ledger; this.docs = docs; this.jdbc = jdbc; this.om = om.copy().enable(SerializationFeature.INDENT_OUTPUT);
     }
 
-    public byte[] gstr1Json(String period) throws Exception { return om.writeValueAsBytes(gst.gstr1(period).get("portalJson")); }
+    /** Refuses (400) while the return has portal blockers such as missing HSN/SAC codes — the portal would reject the upload. */
+    @SuppressWarnings("unchecked")
+    public byte[] gstr1Json(String period) throws Exception {
+        Map<String, Object> g1 = gst.gstr1(period);
+        List<String> b = (List<String>) g1.getOrDefault("blockers", List.of());
+        if (!b.isEmpty()) throw com.account0.common.ApiException.bad("GSTR-1 JSON not exported: " + String.join(" | ", new java.util.LinkedHashSet<>(b)));
+        return om.writeValueAsBytes(g1.get("portalJson"));
+    }
 
     static BigDecimal r(Object paise) { return BigDecimal.valueOf(paise == null ? 0 : ((Number) paise).longValue(), 2); }
 
@@ -120,7 +127,8 @@ public class GstExportService {
                     + "documents/               Source invoices (as uploaded)\n\n"
                     + (warnings.isEmpty() ? "No warnings.\n" : "WARNINGS:\n- " + String.join("\n- ", warnings) + "\n")).getBytes());
             put(z, "gstr3b-computation.json", om.writeValueAsBytes(g3));
-            put(z, "gstr1-portal.json", gstr1Json(period));
+            try { put(z, "gstr1-portal.json", gstr1Json(period)); }
+            catch (com.account0.common.ApiException e) { put(z, "gstr1-portal-NOT-EXPORTED.txt", e.getMessage().getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
             put(z, "gst-workings.xlsx", excel(period));
             put(z, "invoice-register.csv", registerCsv(period).getBytes());
             put(z, "journal.csv", ledger.journalCsv(period).getBytes());

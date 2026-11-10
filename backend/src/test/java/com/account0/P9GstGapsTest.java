@@ -34,15 +34,19 @@ class P9GstGapsTest {
         // the note must not appear as an export invoice
         List<Map<String, Object>> exp = (List<Map<String, Object>>) json.get("exp");
         assertThat(((List<?>) exp.get(0).get("inv"))).hasSize(1);
-        assertThat(((List<Map<String, Object>>) r.get("tables")).stream().anyMatch(t -> "9B-UR".equals(t.get("key")) && ((Number) t.get("taxable_paise")).longValue() == 8_400_000L)).isTrue();
+        assertThat(((List<Map<String, Object>>) r.get("tables")).stream().anyMatch(t -> "9B-UR".equals(t.get("key")) && ((Number) t.get("taxable_paise")).longValue() == -8_400_000L)).isTrue();   // credit note nets negative (audit #26)
         // export HSN is reduced by the credit note (33,600 - 8,400 = 25,200)
         Map<String, Object> hsn = ((List<Map<String, Object>>) r.get("hsnB2c")).get(0);
         assertThat(((java.math.BigDecimal) hsn.get("txval")).compareTo(new java.math.BigDecimal("252000.00"))).isEqualTo(0);
         // Table 13: 5 issued (4 sales-side docs counted incl. the note = 3 sales + 1 note) + 1 cancelled
         Map<String, Object> docs = (Map<String, Object>) r.get("documentsIssued");
         assertThat(docs).containsEntry("cancelled", 1).containsEntry("netIssued", 3).containsEntry("count", 4);
-        List<Map<String, Object>> det = (List<Map<String, Object>>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) json.get("doc_issue")).get("doc_det")).get(0)).get("docs");
-        assertThat(det.get(0)).containsEntry("totnum", 4).containsEntry("cancel", 1).containsEntry("net_issue", 3).containsEntry("to", "CN/1".compareTo("ACW/25-26/043") > 0 ? "CN/1" : "ACW/25-26/043");
+        // audit #8: invoices are doc_num 1 (series ACW/25-26/), credit notes doc_num 5 — no longer merged into one row
+        List<Map<String, Object>> dd = (List<Map<String, Object>>) ((Map<String, Object>) json.get("doc_issue")).get("doc_det");
+        assertThat(dd).extracting(m -> m.get("doc_num")).containsExactly(1, 5);
+        List<Map<String, Object>> det = (List<Map<String, Object>>) dd.get(0).get("docs");
+        assertThat(det.get(0)).containsEntry("from", "ACW/25-26/041").containsEntry("to", "ACW/25-26/043").containsEntry("totnum", 3).containsEntry("cancel", 1).containsEntry("net_issue", 2);
+        assertThat((List<Map<String, Object>>) dd.get(1).get("docs")).first().satisfies(m -> assertThat(m).containsEntry("from", "CN/1").containsEntry("totnum", 1));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

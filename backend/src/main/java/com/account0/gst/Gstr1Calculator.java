@@ -54,24 +54,32 @@ public final class Gstr1Calculator {
         return compute(invoices, ourGstin, ourState, period, List.of());
     }
 
-    /** cancelledNos: numbers of sales documents that were issued and then cancelled (Table 13 "cancelled"); excluded from every figure. */
+    /** cancelledNos: numbers of sales INVOICES that were issued and then cancelled (Table 13 "cancelled"); excluded from every figure. */
     public static Map<String, Object> compute(List<Map<String, Object>> invoices, String ourGstin, String ourState, String period, List<String> cancelledNos) {
+        return computeDocs(invoices, ourGstin, ourState, period, cancelledNos.stream().map(n -> Map.<String, Object>of("invoice_no", n, "doc_type", "INVOICE")).toList());
+    }
+
+    /** cancelled: {invoice_no, doc_type} of sales documents issued and then cancelled. */
+    public static Map<String, Object> computeDocs(List<Map<String, Object>> invoices, String ourGstin, String ourState, String period, List<Map<String, Object>> cancelled) {
         Map<String, List<Map<String, Object>>> b2b = new TreeMap<>(), cdnr = new TreeMap<>();
         Map<String, List<Map<String, Object>>> b2cl = new TreeMap<>();
         List<Map<String, Object>> cdnur = new ArrayList<>();
         Map<String, Map<String, Object>> b2cs = new TreeMap<>();
         List<Map<String, Object>> expWop = new ArrayList<>(), expWp = new ArrayList<>();
         Map<String, Map<String, Object>> hsnB2b = new TreeMap<>(), hsnB2c = new TreeMap<>();
-        long nilIntraB2b = 0, nilInterB2b = 0, exemptAmt = 0, ngsup = 0;
+        // Table 8: sply_ty -> {nil, exempt, non-GST}
+        Map<String, long[]> nil = new LinkedHashMap<>();
+        for (String k : List.of("INTRB2B", "INTRAB2B", "INTRB2C", "INTRAB2C")) nil.put(k, new long[3]);
+        List<String> blockers = new ArrayList<>();
         Map<String, Figure> figs = new LinkedHashMap<>();
         Figure fB2b = fig(figs, "4A", "Table 4A — B2B invoices", "Sales to registered buyers, invoice-wise, with buyer GSTIN.", "Sec 37 CGST Act; Rule 59");
         Figure fB2cl = fig(figs, "5", "Table 5 — B2C (Large)", "Inter-state sales to unregistered buyers where invoice value exceeds ₹1 lakh, invoice-wise.", "Rule 59(4)(b); Notification 12/2024-CT");
         Figure fExp = fig(figs, "6A", "Table 6A — Exports", "Export invoices. WOPAY = under LUT without IGST; WPAY = with IGST.", "Sec 16 IGST Act");
         Figure fB2cs = fig(figs, "7", "Table 7 — B2C (Others)", "All other sales to unregistered buyers, consolidated by place of supply and rate.", "Rule 59(4)(c)");
         Figure fNil = fig(figs, "8", "Table 8 — Nil rated, exempted and non-GST", "Value of nil/exempt/non-GST sales.", "Rule 59(4)(d)");
-        Figure fCdn = fig(figs, "9B", "Table 9B — Credit/Debit notes (registered)", "Credit and debit notes issued to registered buyers.", "Sec 34 CGST Act");
-        Figure fCdnur = fig(figs, "9B-UR", "Table 9B — Credit/Debit notes (unregistered, incl. export notes: CDNUR)", "Credit and debit notes on export invoices (type EXPWP / EXPWOP). Shown as issued (credit notes reduce your liability).", "Sec 34 CGST Act; Rule 53");
-        int docCount = 0; List<String> nums = new ArrayList<>(); List<String> notes = new ArrayList<>();
+        Figure fCdn = fig(figs, "9B", "Table 9B — Credit/Debit notes (registered)", "Credit and debit notes issued to registered buyers, netted: credit notes reduce (negative), debit notes add.", "Sec 34 CGST Act");
+        Figure fCdnur = fig(figs, "9B-UR", "Table 9B — Credit/Debit notes (unregistered, incl. export notes: CDNUR)", "Credit and debit notes on export invoices (type EXPWP / EXPWOP). Also credit/debit notes on B2C Large invoices (type B2CL). Netted: credit notes negative, debit notes positive.", "Sec 34 CGST Act; Rule 53");
+        List<Map<String, Object>> issued = new ArrayList<>(); List<String> notes = new ArrayList<>();
 
         for (Map<String, Object> inv : invoices) {
             if (!"SALE".equals(inv.get("direction"))) continue;
@@ -79,7 +87,8 @@ public final class Gstr1Calculator {
             String pos = (String) inv.get("place_of_supply");
             long tx = l(inv.get("taxable_paise")), ig = l(inv.get("igst_paise")), cg = l(inv.get("cgst_paise")), sg = l(inv.get("sgst_paise")), ce = l(inv.get("cess_paise")), val = l(inv.get("total_paise"));
             boolean note = !"INVOICE".equals(inv.get("doc_type"));
-            docCount++; nums.add((String) inv.get("invoice_no"));
+            issued.add(Map.of("invoice_no", Objects.toString(inv.get("invoice_no"), ""), "doc_type", Objects.toString(inv.get("doc_type"), "INVOICE")));
+            long nsign = "CREDIT_NOTE".equals(inv.get("doc_type")) ? -1 : 1;
             Map<String, Object> base = new LinkedHashMap<>();
             if (note) {
                 base.put("ntty", "CREDIT_NOTE".equals(inv.get("doc_type")) ? "C" : "D"); base.put("nt_num", inv.get("invoice_no")); base.put("nt_dt", d(inv.get("invoice_date")));
@@ -91,17 +100,24 @@ public final class Gstr1Calculator {
                     base.put("inv_typ", t == SupplyType.B2B ? "R" : t == SupplyType.SEZ_LUT ? "SEWOP" : "SEWP");
                     base.put("itms", items(inv));
                     String ctin = (String) inv.get("counterparty_gstin");
-                    if (note) { cdnr.computeIfAbsent(ctin, k -> new ArrayList<>()).add(base); fCdn.add(inv, 1, tx, ig, cg, sg, ce); }
+                    if (note) { cdnr.computeIfAbsent(ctin, k -> new ArrayList<>()).add(base); fCdn.add(inv, nsign, tx, ig, cg, sg, ce); }
                     else { b2b.computeIfAbsent(ctin, k -> new ArrayList<>()).add(base); fB2b.add(inv, 1, tx, ig, cg, sg, ce); }
                     hsn(hsnB2b, inv, "CREDIT_NOTE".equals(inv.get("doc_type")) ? -1 : 1);
                 }
                 case B2C -> {
                     boolean inter = pos != null && !pos.equals(ourState);
                     long sign = "CREDIT_NOTE".equals(inv.get("doc_type")) ? -1 : 1;
-                    if (inter && !note && val > B2CL_THRESHOLD_PAISE) {
+                    long orig = l(inv.get("original_total_paise"));
+                    if (inter && note && orig > B2CL_THRESHOLD_PAISE) {
+                        // note against a B2CL invoice -> CDNUR type B2CL (not netted into B2CS)
+                        base.put("typ", "B2CL"); base.put("pos", pos); base.put("itms", items(inv));
+                        cdnur.add(base); fCdnur.add(inv, nsign, tx, ig, cg, sg, ce);
+                    } else if (inter && !note && val > B2CL_THRESHOLD_PAISE) {
                         base.put("itms", items(inv));
                         b2cl.computeIfAbsent(pos, k -> new ArrayList<>()).add(base); fB2cl.add(inv, 1, tx, ig, cg, sg, ce);
                     } else {
+                        if (inter && note && inv.get("original_total_paise") == null)
+                            notes.add("Note " + inv.get("invoice_no") + " is inter-state to an unregistered buyer, but its original invoice (" + inv.get("original_invoice_no") + ") is not in Account0: if that invoice was B2CL (value > ₹1 lakh) the note belongs in CDNUR type B2CL, not B2CS. Netted into B2CS for now.");
                         for (Map<String, Object> it : items(inv)) {
                             @SuppressWarnings("unchecked") Map<String, Object> det = (Map<String, Object>) it.get("itm_det");
                             String key = (inter ? "INTER" : "INTRA") + "|" + pos + "|" + det.get("rt");
@@ -119,15 +135,24 @@ public final class Gstr1Calculator {
                     long esign = "CREDIT_NOTE".equals(inv.get("doc_type")) ? -1 : 1;
                     if (note) {
                         base.put("typ", t == SupplyType.EXPORT_LUT ? "EXPWOP" : "EXPWP");
-                        cdnur.add(base); fCdnur.add(inv, 1, tx, ig, cg, sg, ce);
+                        cdnur.add(base); fCdnur.add(inv, nsign, tx, ig, cg, sg, ce);
                     } else {
                         (t == SupplyType.EXPORT_LUT ? expWop : expWp).add(base);
                         fExp.add(inv, 1, tx, ig, cg, sg, ce);
                     }
                     hsn(hsnB2c, inv, esign);
                 }
-                case NIL_EXEMPT_OUT -> { exemptAmt += tx; fNil.add(inv, 1, tx, 0, 0, 0, 0); }
-                case NON_GST_OUT -> { ngsup += tx; fNil.add(inv, 1, tx, 0, 0, 0, 0); }
+                case NIL_EXEMPT_OUT, NON_GST_OUT -> {
+                    boolean reg = inv.get("counterparty_gstin") != null && !inv.get("counterparty_gstin").toString().isBlank();
+                    boolean inter = ourState != null && pos != null && !pos.equals(ourState);
+                    String k = (inter ? "INTR" : "INTRA") + (reg ? "B2B" : "B2C");
+                    int col = t == SupplyType.NON_GST_OUT ? 2 : "NIL".equals(inv.get("nil_type")) ? 0 : 1;
+                    if (t == SupplyType.NIL_EXEMPT_OUT && inv.get("nil_type") == null)
+                        notes.add("Invoice " + inv.get("invoice_no") + ": nil-rated or exempt not stated — reported as EXEMPT in Table 8. Set it on the invoice if it is nil-rated.");
+                    nil.get(k)[col] += nsign * tx;
+                    fNil.add(inv, nsign, tx, 0, 0, 0, 0);
+                    if (t == SupplyType.NIL_EXEMPT_OUT) hsn(reg ? hsnB2b : hsnB2c, inv, nsign);   // nil/exempt supplies are part of the HSN summary
+                }
                 default -> {}
             }
         }
@@ -144,23 +169,77 @@ public final class Gstr1Calculator {
         if (!exp.isEmpty()) json.put("exp", exp);
         if (!cdnur.isEmpty()) json.put("cdnur", cdnur);
         if (!cdnr.isEmpty()) json.put("cdnr", cdnr.entrySet().stream().map(e -> Map.of("ctin", e.getKey(), "nt", e.getValue())).toList());
-        if (exemptAmt + ngsup > 0) json.put("nil", Map.of("inv", List.of(Map.of("sply_ty", "INTRAB2C", "expt_amt", r(exemptAmt), "nil_amt", BigDecimal.ZERO, "ngsup_amt", r(ngsup)))));
+        List<Map<String, Object>> nilRows = new ArrayList<>();
+        for (var e : nil.entrySet()) { long[] v = e.getValue(); if (v[0] != 0 || v[1] != 0 || v[2] != 0) nilRows.add(Map.of("sply_ty", e.getKey(), "nil_amt", r(v[0]), "expt_amt", r(v[1]), "ngsup_amt", r(v[2]))); }
+        if (!nilRows.isEmpty()) json.put("nil", Map.of("inv", nilRows));
         Map<String, Object> hsn = new LinkedHashMap<>();
         hsn.put("hsn_b2b", numbered(hsnB2b)); hsn.put("hsn_b2c", numbered(hsnB2c));
         json.put("hsn", hsn);
-        int cancelled = cancelledNos.size(); int totIssued = docCount + cancelled;
-        nums.addAll(cancelledNos);
-        Collections.sort(nums);
-        if (totIssued > 0) json.put("doc_issue", Map.of("doc_det", List.of(Map.of("doc_num", 1, "docs", List.of(Map.of("num", 1, "from", nums.get(0), "to", nums.get(nums.size() - 1), "totnum", totIssued, "cancel", cancelled, "net_issue", docCount))))));
+        Table13 t13 = table13(issued, cancelled);
+        if (!t13.docDet().isEmpty()) json.put("doc_issue", Map.of("doc_det", t13.docDet()));
+        for (Map<String, Map<String, Object>> agg : List.of(hsnB2b, hsnB2c))
+            for (Map<String, Object> h : agg.values()) {
+                String code = Objects.toString(h.get("hsn_sc"), "");
+                if (!code.matches("\\d{4}(\\d{2}(\\d{2})?)?")) blockers.add("HSN/SAC '" + code + "' (" + h.get("desc") + ") is not a valid 4/6/8-digit code. Since the May 2025 period the portal only accepts codes from its HSN list — enter the SAC on the invoice lines (e.g. 998314 IT design/development, 998315 hosting) before exporting the JSON.");
+            }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("tables", figs.values().stream().map(Figure::toMap).toList());
         out.put("hsnB2b", numbered(hsnB2b)); out.put("hsnB2c", numbered(hsnB2c));
-        out.put("documentsIssued", Map.of("from", nums.isEmpty() ? "" : nums.get(0), "to", nums.isEmpty() ? "" : nums.get(nums.size() - 1), "count", totIssued, "cancelled", cancelled, "netIssued", docCount,
-                "rule", "Table 13: serial range of documents issued, with cancelled ones counted separately. Cancellations come from invoices you marked as cancelled in Account0 — mark any others (documents never uploaded) with your CA."));
+        Map<String, Object> di = new LinkedHashMap<>();
+        di.put("from", t13.series().isEmpty() ? "" : t13.series().get(0).get("from")); di.put("to", t13.series().isEmpty() ? "" : t13.series().get(0).get("to"));
+        di.put("count", t13.total()); di.put("cancelled", t13.cancelled()); di.put("netIssued", t13.total() - t13.cancelled()); di.put("series", t13.series());
+        di.put("rule", "Table 13 (mandatory since the May 2025 period): one row per document series — invoices (1), debit notes (4), credit notes (5) — with the serial range, total, cancelled and net issued. Cancellations come from documents you marked as cancelled in Account0; a series with gaps is flagged.");
+        out.put("documentsIssued", di);
+        notes.addAll(t13.notes());
+        out.put("blockers", blockers);
         out.put("portalJson", json);
         out.put("notes", notes);
         return out;
+    }
+
+    record Table13(List<Map<String, Object>> docDet, List<Map<String, Object>> series, int total, int cancelled, List<String> notes) {}
+    static final java.util.regex.Pattern TRAILING = java.util.regex.Pattern.compile("^(.*?)(\\d+)$");
+
+    /** Groups documents by nature (1 invoices, 4 debit notes, 5 credit notes) and series prefix; sorts by the trailing number. */
+    static Table13 table13(List<Map<String, Object>> issued, List<Map<String, Object>> cancelled) {
+        record D(String no, String prefix, long n, boolean cancelled) {}
+        Map<Integer, Map<String, List<D>>> g = new TreeMap<>();
+        List<String> notes = new ArrayList<>();
+        int total = 0, canc = 0;
+        for (int pass = 0; pass < 2; pass++)
+            for (Map<String, Object> d : pass == 0 ? issued : cancelled) {
+                String no = Objects.toString(d.get("invoice_no"), "").trim();
+                String dt = Objects.toString(d.get("doc_type"), "INVOICE");
+                int nature = "DEBIT_NOTE".equals(dt) ? 4 : "CREDIT_NOTE".equals(dt) ? 5 : 1;
+                var m = TRAILING.matcher(no);
+                String prefix = m.matches() ? m.group(1) : no; long n = -1;
+                if (m.matches()) try { n = Long.parseLong(m.group(2)); } catch (NumberFormatException ignored) {}
+                g.computeIfAbsent(nature, k -> new TreeMap<>()).computeIfAbsent(prefix, k -> new ArrayList<>()).add(new D(no, prefix, n, pass == 1));
+                total++; if (pass == 1) canc++;
+            }
+        List<Map<String, Object>> docDet = new ArrayList<>(), series = new ArrayList<>();
+        String[] names = {"", "Invoices for outward supply", "", "", "Debit notes", "Credit notes"};
+        for (var e : g.entrySet()) {
+            List<Map<String, Object>> docs = new ArrayList<>(); int num = 1;
+            for (var ser : e.getValue().entrySet()) {
+                List<D> l = new ArrayList<>(ser.getValue());
+                l.sort(Comparator.comparingLong(D::n).thenComparing(D::no));
+                int c = (int) l.stream().filter(D::cancelled).count();
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("num", num++); row.put("from", l.get(0).no()); row.put("to", l.get(l.size() - 1).no()); row.put("totnum", l.size()); row.put("cancel", c); row.put("net_issue", l.size() - c);
+                docs.add(row);
+                Map<String, Object> sv = new LinkedHashMap<>(row); sv.put("doc_num", e.getKey()); sv.put("nature", names[e.getKey()]); sv.put("series", ser.getKey());
+                long lo = l.get(0).n(), hi = l.get(l.size() - 1).n();
+                if (lo >= 0 && hi - lo + 1 > l.size()) {
+                    sv.put("gap", true);
+                    notes.add("Table 13: series '" + ser.getKey() + "' runs " + l.get(0).no() + " … " + l.get(l.size() - 1).no() + " (" + (hi - lo + 1) + " numbers) but only " + l.size() + " document(s) are in Account0 for this period — upload or mark the missing ones as cancelled.");
+                }
+                series.add(sv);
+            }
+            docDet.add(Map.of("doc_num", e.getKey(), "docs", docs));
+        }
+        return new Table13(docDet, series, total, canc, notes);
     }
 
     static Figure fig(Map<String, Figure> m, String k, String label, String rule, String ref) { Figure f = new Figure(k, label, rule, ref); m.put(k, f); return f; }

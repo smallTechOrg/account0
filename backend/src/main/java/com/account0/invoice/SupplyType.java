@@ -31,4 +31,7 @@ public enum SupplyType {
     public boolean zeroTaxOnInvoice() { return this == EXPORT_LUT || this == SEZ_LUT || this == NIL_EXEMPT_OUT || this == NON_GST_OUT || this == UNREGISTERED || this == NIL_EXEMPT_IN || isRcm(); }
 
     public static final List<String> RATES = List.of("0", "0.1", "0.25", "1.5", "3", "5", "12", "18", "28", "40");
+    /** GST 2.0 (rate rationalisation, effective 22 Sep 2025): 12% and 28% slabs abolished; kept only for older invoices. */
+    public static final List<String> PRE_GST2_RATES = List.of("12", "28");
+    public static final String GST2_FROM = "2025-09-22";
 }

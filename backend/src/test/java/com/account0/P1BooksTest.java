@@ -93,7 +93,7 @@ class P1BooksTest {
 
         // manual RCM purchase: rate confirmed by user → deterministic RCM tax
         Map<String, Object> rcm = rest.postForObject("/api/invoices", TestSupport.map("direction", "PURCHASE", "invoice_no", "INV-1", "invoice_date", "2026-10-01",
-                "counterparty_name", "Atlas Analytics, Inc.", "counterparty_country", "USA", "place_of_supply", "29", "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "itc_eligible", 1,
+                "counterparty_name", "Atlas Analytics, Inc.", "counterparty_country", "USA", "place_of_supply", "29", "supply_type", "IMPORT_SERVICE_RCM", "reverse_charge", 1, "rcm_paid_on", "2026-10-01", "itc_eligible", 1,
                 "taxable_paise", 10080000, "total_paise", 10080000, "category", "Expense: Software subscriptions",
                 "lines", List.of(Map.of("description", "seats", "gst_rate", "18", "taxable_paise", 10080000))), Map.class);
         long rid = ((Number) rcm.get("id")).longValue();
