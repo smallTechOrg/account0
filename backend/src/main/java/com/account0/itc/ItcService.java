@@ -20,7 +20,44 @@ import java.util.*;
 public class ItcService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper om;
-    public ItcService(JdbcTemplate jdbc, ObjectMapper om) { this.jdbc = jdbc; this.om = om; }
+    private final com.account0.common.AuditService audit;
+    public ItcService(JdbcTemplate jdbc, ObjectMapper om, com.account0.common.AuditService audit) { this.jdbc = jdbc; this.om = om; this.audit = audit; }
+
+    /** Phase 11: the user accepts or rejects a POSSIBLE_MATCH / AMOUNT_MISMATCH 2B line (reason required, audited). Accepted lines are
+     *  claimed in 4A(5) at the 2B tax by head; rejected ones stay out. decision = ACCEPTED | REJECTED | CLEAR. */
+    public Map<String, Object> decide(long docId, String decision, String reason) {
+        List<Map<String, Object>> r = jdbc.queryForList("SELECT * FROM gstr2b_doc WHERE tenant_id=? AND id=?", Tenant.current(), docId);
+        if (r.isEmpty()) throw ApiException.notFound("2B line " + docId);
+        Map<String, Object> d = r.get(0);
+        match((String) d.get("period"));
+        d = jdbc.queryForMap("SELECT * FROM gstr2b_doc WHERE id=?", docId);
+        String key = ItcMatcher.norm((String) d.get("doc_no")), ctin = ItcMatcher.normGstin((String) d.get("ctin"));
+        List<Map<String, Object>> old = jdbc.queryForList("SELECT * FROM itc_2b_decision WHERE tenant_id=? AND period=? AND ctin=? AND doc_no_norm=? AND doc_type=?", Tenant.current(), d.get("period"), ctin, key, d.get("doc_type"));
+        Object before = old.isEmpty() ? null : old.get(0).get("decision");
+        if ("CLEAR".equals(decision)) {
+            jdbc.update("DELETE FROM itc_2b_decision WHERE tenant_id=? AND period=? AND ctin=? AND doc_no_norm=? AND doc_type=?", Tenant.current(), d.get("period"), ctin, key, d.get("doc_type"));
+            audit.record("user", "gstr2b_doc", docId, "decision", "decision", before, null, reason == null ? "cleared" : reason);
+            return Map.of("docId", docId, "decision", "NONE");
+        }
+        if (!"ACCEPTED".equals(decision) && !"REJECTED".equals(decision)) throw ApiException.bad("decision must be ACCEPTED, REJECTED or CLEAR");
+        if (reason == null || reason.isBlank()) throw ApiException.bad("Give a reason (it is recorded in the audit trail), e.g. 'vendor confirmed the typo in the invoice number'.");
+        String st = (String) d.get("match_status");
+        if (!"POSSIBLE_MATCH".equals(st) && !"AMOUNT_MISMATCH".equals(st)) throw ApiException.bad("Only POSSIBLE_MATCH or AMOUNT_MISMATCH lines can be accepted or rejected (this line is " + st + ").");
+        if (d.get("matched_invoice_id") == null) throw ApiException.bad("This 2B line has no book invoice paired with it.");
+        jdbc.update("""
+                INSERT INTO itc_2b_decision(tenant_id, period, ctin, doc_no_norm, doc_type, invoice_id, decision, reason) VALUES (?,?,?,?,?,?,?,?)
+                ON CONFLICT(tenant_id, period, ctin, doc_no_norm, doc_type) DO UPDATE SET invoice_id=excluded.invoice_id, decision=excluded.decision, reason=excluded.reason,
+                  created_at=strftime('%Y-%m-%dT%H:%M:%SZ','now')""", Tenant.current(), d.get("period"), ctin, key, d.get("doc_type"), d.get("matched_invoice_id"), decision, reason.trim());
+        audit.record("user", "gstr2b_doc", docId, "decision", "decision", before, decision, st + " " + d.get("doc_no") + " -> invoice " + d.get("matched_invoice_id") + ": " + reason.trim());
+        return Map.of("docId", docId, "decision", decision, "invoiceId", d.get("matched_invoice_id"), "reason", reason.trim());
+    }
+
+    Map<String, Map<String, Object>> decisionsFor(String period) {
+        Map<String, Map<String, Object>> out = new HashMap<>();
+        for (Map<String, Object> r : jdbc.queryForList("SELECT * FROM itc_2b_decision WHERE tenant_id=? AND period=?", Tenant.current(), period))
+            out.put(r.get("ctin") + "|" + r.get("doc_no_norm") + "|" + r.get("doc_type"), r);
+        return out;
+    }
 
     static long p(JsonNode n, String k) {
         JsonNode v = n.get(k);
@@ -97,6 +134,7 @@ public class ItcService {
         Map<Long, Map<String, Object>> byBook = new HashMap<>(), byDoc = new HashMap<>();
         bookRows.forEach(r -> byBook.put(((Number) r.get("id")).longValue(), r)); docRows.forEach(r -> byDoc.put(((Number) r.get("id")).longValue(), r));
         List<Map<String, Object>> out = new ArrayList<>();
+        Map<String, Map<String, Object>> dec = decisionsFor(period);
         for (ItcMatcher.Result r : ItcMatcher.match(books, docs)) {
             Map<String, Object> bk = r.bookId() == null ? null : byBook.get(r.bookId());
             if (r.status().equals("IN_BOOKS_NOT_IN_2B") && bk != null && !period.equals(bk.get("period"))) continue; // other months' business
@@ -112,6 +150,13 @@ public class ItcService {
             row.put("taxBooksPaise", bk == null ? null : bk.get("tax"));
             row.put("supplierFiledOn", dc == null ? null : dc.get("supplier_filed_on"));
             row.put("itcAvailable2b", dc == null ? null : dc.get("itc_available"));
+            if (dc != null) {
+                Map<String, Object> x = dec.get(ItcMatcher.normGstin((String) dc.get("ctin")) + "|" + ItcMatcher.norm((String) dc.get("doc_no")) + "|" + dc.get("doc_type"));
+                boolean applies = x != null && r.bookId() != null && ((Number) x.get("invoice_id")).longValue() == r.bookId() && ("POSSIBLE_MATCH".equals(r.status()) || "AMOUNT_MISMATCH".equals(r.status()));
+                row.put("decision", applies ? x.get("decision") : null); row.put("decisionReason", applies ? x.get("reason") : null);
+                row.put("decidable", "POSSIBLE_MATCH".equals(r.status()) || "AMOUNT_MISMATCH".equals(r.status()));
+                row.put("igst2bPaise", dc.get("igst_paise")); row.put("cgst2bPaise", dc.get("cgst_paise")); row.put("sgst2bPaise", dc.get("sgst_paise")); row.put("cess2bPaise", dc.get("cess_paise"));
+            }
             out.add(row);
         }
         return out;

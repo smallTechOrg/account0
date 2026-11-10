@@ -28,6 +28,7 @@ public class AlertService {
         Set<String> imported = new HashSet<>(jdbc.queryForList("SELECT period FROM gstr2b_import WHERE tenant_id=?", String.class, t));
         for (String period : imported) {
             for (Map<String, Object> r : itc.match(period)) {
+                if (r.get("decision") != null) continue;   // the user accepted/rejected this 2B line (audited)
                 if ("IN_BOOKS_NOT_IN_2B".equals(r.get("status")))
                     out.add(a("VENDOR_NOT_FILED", "HIGH", period, "Invoice " + r.get("invoiceNo") + " from " + r.get("party") + " (" + r.get("gstin") + ") is not in GSTR-2B for " + period + " — ITC of " + rs(((Number) r.get("taxBooksPaise")).longValue()) + " is at risk.",
                             "ITC is allowed only for invoices that appear in GSTR-2B (Sec 16(2)(aa) CGST Act). Ask the vendor whether they have filed GSTR-1 for the month.", "invoice:" + r.get("invoiceId")));

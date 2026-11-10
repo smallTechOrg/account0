@@ -3,6 +3,7 @@ import { Why } from "@/lib/Why";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { inr, inrPlain } from "@/lib/format";
+import { ClaimTable } from "@/lib/ClaimTable";
 
 function lastMonth(): string {
   const d = new Date();
@@ -79,6 +80,7 @@ export default function Gst() {
               <h2>3.1 Outward and reverse-charge inward supplies</h2><FigTable figs={g3.table31} onPick={setPick} />
               {g3.table32.length > 0 && <><h2>3.2 Inter-state supplies to unregistered persons, composition dealers and UIN holders</h2><FigTable figs={g3.table32} onPick={setPick} /></>}
               <h2>4 Eligible ITC</h2><FigTable figs={g3.table4} onPick={setPick} />
+              {g3.itcClaims?.rows?.length > 0 && <details><summary>ITC claim reconciliation (each purchase claimed once)</summary><div className="why">{g3.itcClaims.rule}</div><ClaimTable rows={g3.itcClaims.rows} /></details>}
               <h2>5 Exempt / nil / non-GST inward</h2><FigTable figs={g3.table5} onPick={setPick} />
               <h2>6.1 Payment of tax</h2>
               <div className="why">{g3.payment61.rule} <span className="muted">({g3.payment61.ref})</span></div>

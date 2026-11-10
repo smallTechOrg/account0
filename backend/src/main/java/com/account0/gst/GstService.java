@@ -16,7 +16,8 @@ public class GstService {
     private final CompanyService company;
     private final AuditService audit;
     private final com.account0.itc.ItcService itc;
-    public GstService(JdbcTemplate jdbc, CompanyService company, AuditService audit, com.account0.itc.ItcService itc) { this.jdbc = jdbc; this.company = company; this.audit = audit; this.itc = itc; }
+    private final ItcClaimService claims;
+    public GstService(JdbcTemplate jdbc, CompanyService company, AuditService audit, com.account0.itc.ItcService itc, ItcClaimService claims) { this.jdbc = jdbc; this.company = company; this.audit = audit; this.itc = itc; this.claims = claims; }
 
     static void checkPeriod(String p) { if (p == null || !p.matches("\\d{4}-(0[1-9]|1[0-2])")) throw ApiException.bad("period must be YYYY-MM"); }
 
@@ -40,12 +41,36 @@ public class GstService {
         return inv;
     }
 
-    /** GSTR-2B input for 4A(5): null when no 2B is imported for the period. */
-    Gstr3bCalculator.TwoB twoB(String period) {
-        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM gstr2b_import WHERE tenant_id=? AND period=?", Integer.class, Tenant.current(), period);
-        if (n == null || n == 0) return null;
-        List<Map<String, Object>> rows = itc.match(period);   // refreshes match status on every 2B line
+    /** 4A(5)/4A(4) input for a period. A document's ITC is claimed in exactly one period (ItcClaimService.plan): locked GSTR-3B
+     *  snapshot first, else the earliest of its provisional (no-2B) period and the 2B periods in which it matched or was accepted. */
+    public Gstr3bCalculator.TwoB twoB(String period) { return twoB(period, new ArrayList<>()); }
+    /** recOut receives the ITC claim reconciliation rows of the period. */
+    public Gstr3bCalculator.TwoB twoB(String period, List<Map<String, Object>> recOut) {
+        Map<Long, List<ItcClaimService.Claim>> cands = claims.candidates();
+        Map<Long, ItcClaimService.Claim> locked = claims.lockedClaims();
+        Map<Long, ItcClaimService.Claim> plan = ItcClaimService.plan(cands, locked);
+        recOut.addAll(claims.reconciliation(period, cands, plan));
+        boolean imported = claims.twoBPeriods().contains(period);
         List<Map<String, Object>> claim = new ArrayList<>(), isd = new ArrayList<>(); List<String> notes = new ArrayList<>();
+        if (claims.filedLocked(period) && locked.values().stream().anyMatch(c -> c.period().equals(period))) {
+            for (ItcClaimService.Claim c : locked.values()) if (c.period().equals(period)) claim.add(c.line());
+            if (imported) for (Map<String, Object> d : jdbc.queryForList("SELECT * FROM gstr2b_doc WHERE tenant_id=? AND period=? AND section='ISD' AND itc_available=1 ORDER BY id", Tenant.current(), period))
+                isd.add(ItcClaimService.lineFrom2b(d, null));
+            notes.add("4A(5) for " + period + " is the ITC recorded when its GSTR-3B was filed (period locked): " + claim.size() + " document(s). Later GSTR-2B imports or book changes do not move these claims while the filing stays locked.");
+            return new Gstr3bCalculator.TwoB(claim, isd, notes, "FILED");
+        }
+        if (!imported) {
+            for (Map<String, Object> b : claims.bookDocs()) {
+                if (!period.equals(b.get("period"))) continue;
+                long id = ((Number) b.get("id")).longValue();
+                ItcClaimService.Claim c = plan.get(id);
+                if (c != null && !c.period().equals(period)) { notes.add("Purchase " + b.get("invoice_no") + " (" + b.get("counterparty_name") + ") is left out of 4A(5): its ITC is already claimed in " + c.period() + " (" + c.basis() + (c.filed() ? ", filed return" : "") + "). A document is claimed once."); continue; }
+                claim.add(b);
+            }
+            return new Gstr3bCalculator.TwoB(claim, isd, notes, "PROVISIONAL");
+        }
+        List<Map<String, Object>> rows = itc.match(period);   // refreshes match status on every 2B line
+        Map<String, Map<String, Object>> dec = claims.decisions();
         for (Map<String, Object> d : jdbc.queryForList("SELECT d.*, i.invoice_date AS book_date, i.itc_eligible FROM gstr2b_doc d LEFT JOIN invoice i ON i.id=d.matched_invoice_id WHERE d.tenant_id=? AND d.period=? ORDER BY d.id", Tenant.current(), period)) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", d.get("matched_invoice_id") != null ? d.get("matched_invoice_id") : "2b:" + d.get("id"));
@@ -58,13 +83,24 @@ public class GstService {
             if (((Number) d.get("itc_available")).intValue() == 0) { notes.add("2B line " + label + " is marked 'ITC not available' (itcavl=N) — not claimed."); continue; }
             if ("ISD".equals(sec)) { isd.add(m); continue; }
             if (((Number) d.get("reverse_charge")).intValue() == 1) continue;   // RCM: you pay the tax; credit is 4A(3) from your books
-            if ("MATCHED".equals(d.get("match_status"))) claim.add(m);
-            else notes.add("2B line " + label + " is " + d.get("match_status") + " — not claimed in 4A(5) until resolved (" + d.get("match_note") + ").");
+            String basis = ItcClaimService.claimBasis(d, dec);
+            if (basis == null) {
+                Map<String, Object> x = dec.get(ItcClaimService.decisionKey(d));
+                if (x != null && "REJECTED".equals(x.get("decision"))) notes.add("2B line " + label + " was REJECTED by you (" + x.get("reason") + ") — not claimed.");
+                else notes.add("2B line " + label + " is " + d.get("match_status") + " — not claimed in 4A(5) until resolved or accepted on the ITC page (" + d.get("match_note") + ").");
+                continue;
+            }
+            ItcClaimService.Claim c = plan.get(((Number) d.get("matched_invoice_id")).longValue());
+            if (c != null && !c.period().equals(period)) { notes.add("2B line " + label + " matches a purchase whose ITC is already claimed in " + c.period() + " (" + c.basis() + (c.filed() ? ", filed return" : "") + ") — not claimed again in " + period + "."); continue; }
+            if ("2B_ACCEPTED".equals(basis)) notes.add("2B line " + label + " was accepted by you (" + dec.get(ItcClaimService.decisionKey(d)).get("reason") + "): claimed at the 2B tax by head.");
+            claim.add(m);
         }
         for (Map<String, Object> r : rows)
-            if ("IN_BOOKS_NOT_IN_2B".equals(r.get("status")))
-                notes.add("Purchase " + r.get("invoiceNo") + " (" + r.get("party") + ") is not in this period's GSTR-2B — its ITC is not claimed now; claim it in the month it first appears in 2B (Sec 16(2)(aa)).");
-        return new Gstr3bCalculator.TwoB(claim, isd, notes);
+            if ("IN_BOOKS_NOT_IN_2B".equals(r.get("status"))) {
+                ItcClaimService.Claim c = r.get("invoiceId") == null ? null : plan.get(((Number) r.get("invoiceId")).longValue());
+                notes.add("Purchase " + r.get("invoiceNo") + " (" + r.get("party") + ") is not in this period's GSTR-2B — " + (c != null ? "its ITC is claimed in " + c.period() + " (" + c.basis() + ")." : "its ITC is not claimed now; claim it in the month it first appears in 2B (Sec 16(2)(aa))."));
+            }
+        return new Gstr3bCalculator.TwoB(claim, isd, notes, "2B");
     }
 
     public List<String> warnings(String period) {
@@ -84,7 +120,11 @@ public class GstService {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("period", period); r.put("gstin", company.gstin());
         r.put("warnings", warnings(period));
-        r.putAll(Gstr3bCalculator.compute(confirmed3b(period), Gstin.stateCode(company.gstin()), period, twoB(period)));
+        List<Map<String, Object>> rec = new ArrayList<>();
+        Gstr3bCalculator.TwoB tb = twoB(period, rec);
+        r.putAll(Gstr3bCalculator.compute(confirmed3b(period), Gstin.stateCode(company.gstin()), period, tb));
+        r.put("itcClaims", Map.of("rule", "A purchase document's ITC is claimed in exactly one return period: the period recorded by a filed (locked) GSTR-3B, otherwise the earliest of (a) its own period while no GSTR-2B is imported for it (provisional, from books) and (b) each GSTR-2B period in which it matched or you accepted the 2B line. Every other candidate period leaves it out.",
+                "ref", "Sec 16(2)(aa), 16(4) CGST Act; Rule 36(4)", "rows", rec));
         @SuppressWarnings("unchecked") List<String> notes = (List<String>) r.get("notes");
         for (Map<String, Object> m : jdbc.queryForList("SELECT * FROM (SELECT i.invoice_no, i.counterparty_name, i.period, " + RCM_TOS_SQL + " AS tos FROM invoice i WHERE i.tenant_id=? AND i.status='CONFIRMED') WHERE period=? AND tos IS NOT NULL AND substr(tos,1,7)<>?", Tenant.current(), period, period))
             notes.add("Reverse-charge invoice " + m.get("invoice_no") + " (" + m.get("counterparty_name") + ") is dated in " + period + " but its time of supply is " + m.get("tos") + " (Sec 13(3): earlier of payment and invoice date + 61 days), so its RCM tax is reported in " + m.get("tos").toString().substring(0, 7) + ". Enter the payment date on the invoice if you have paid.");
@@ -117,6 +157,15 @@ public class GstService {
     }
 
     // ---------- filings / locks ----------
+    /** Records which documents' ITC this period's 4A(5) claims (the filed figure becomes authoritative while locked). */
+    void snapshotClaims(String period) {
+        jdbc.update("DELETE FROM itc_claim WHERE tenant_id=? AND period=?", Tenant.current(), period);   // recompute this period live, then record it
+        Gstr3bCalculator.TwoB tb = twoB(period);
+        Map<Long, ItcClaimService.Claim> plan = claims.plan();
+        int n = claims.snapshot(period, tb.claimable(), tb.provisional() ? "PROVISIONAL" : "2B", plan);
+        audit.record("system", "itc_claim", period, "snapshot", "documents", null, n, "4A(5) claims recorded at GSTR-3B filing/lock");
+    }
+
     public boolean isLocked(String period) {
         Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM filing WHERE tenant_id=? AND period=? AND locked=1", Integer.class, Tenant.current(), period);
         return n != null && n > 0;
@@ -132,6 +181,7 @@ public class GstService {
                 ON CONFLICT(tenant_id, return_type, period) DO UPDATE SET arn=excluded.arn, filed_on=excluded.filed_on, filed_by=excluded.filed_by, locked=1, notes=excluded.notes""",
                 Tenant.current(), rt, period, b.get("arn"), b.get("filed_on"), b.getOrDefault("filed_by", "CA"), b.get("notes"));
         audit.record("user", "filing", rt + ":" + period, "filed+lock", "arn", null, b.get("arn"), "period locked");
+        if ("GSTR3B".equals(rt)) snapshotClaims(period);
         return jdbc.queryForMap("SELECT * FROM filing WHERE tenant_id=? AND return_type=? AND period=?", Tenant.current(), rt, period);
     }
 
@@ -139,6 +189,7 @@ public class GstService {
         Map<String, Object> f = jdbc.queryForMap("SELECT * FROM filing WHERE tenant_id=? AND id=?", Tenant.current(), id);
         if (!locked && (reason == null || reason.isBlank())) throw ApiException.bad("Give a reason to unlock a filed period (it is recorded in the audit trail).");
         jdbc.update("UPDATE filing SET locked=? WHERE id=?", locked ? 1 : 0, id);
+        if (locked && "GSTR3B".equals(f.get("return_type"))) snapshotClaims((String) f.get("period"));
         audit.record("user", "filing", f.get("return_type") + ":" + f.get("period"), locked ? "lock" : "unlock", "locked", f.get("locked"), locked ? 1 : 0, reason);
         return jdbc.queryForMap("SELECT * FROM filing WHERE id=?", id);
     }

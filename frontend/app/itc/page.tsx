@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, jsonBody } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Why } from "@/lib/Why";
+import { ClaimTable } from "@/lib/ClaimTable";
 
 const LABEL: Record<string, [string, string]> = {
   MATCHED: ["Matched", "ok"], AMOUNT_MISMATCH: ["Amount differs", "bad"], POSSIBLE_MATCH: ["Possible match", "warn"],
@@ -14,7 +15,16 @@ export default function Itc() {
   const [rep, setRep] = useState<any>(null);
   const [imports, setImports] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
-  const load = (p = period) => { api(`/api/itc/match?period=${p}`).then(setRep).catch((e) => setMsg(e.message)); api("/api/itc/2b/imports").then(setImports); };
+  const [claims, setClaims] = useState<any>(null);
+  const load = (p = period) => {
+    api(`/api/itc/match?period=${p}`).then(setRep).catch((e) => setMsg(e.message)); api("/api/itc/2b/imports").then(setImports);
+    api(`/api/gst/3b?period=${p}`).then((g) => setClaims(g.itcClaims)).catch(() => setClaims(null));
+  };
+  const decide = async (docId: number, decision: string) => {
+    const reason = decision === "CLEAR" ? "decision cleared" : window.prompt(decision === "ACCEPTED" ? "Why accept this 2B line? (recorded in the audit trail)" : "Why reject this 2B line? (recorded in the audit trail)") ?? "";
+    if (decision !== "CLEAR" && !reason.trim()) return;
+    try { await api(`/api/itc/2b/docs/${docId}/decision`, jsonBody("POST", { decision, reason })); setMsg(`Line ${decision.toLowerCase()}.`); load(); } catch (e: any) { setMsg(e.message); }
+  };
   useEffect(() => { load(); }, [period]);
   const upload = async (f?: File) => {
     if (!f) return; setMsg("");
@@ -35,12 +45,21 @@ export default function Itc() {
         <div className="card">{Object.entries(rep.summary.counts).map(([k, v]: any) => <span key={k} className={`pill ${LABEL[k]?.[1]}`} style={{ marginRight: 8 }}>{LABEL[k]?.[0] ?? k}: {v}</span>)}
           <b style={{ marginLeft: 8 }}>ITC at risk: {inr(rep.summary.itcAtRiskPaise)}</b></div>
         <table data-testid="itc">
-          <thead><tr><th>Status</th><th>Vendor</th><th>GSTIN</th><th>2B doc</th><th>Books invoice</th><th className="num">Tax in 2B</th><th className="num">Tax in books</th><th>Note</th></tr></thead>
+          <thead><tr><th>Status</th><th>Vendor</th><th>GSTIN</th><th>2B doc</th><th>Books invoice</th><th className="num">Tax in 2B</th><th className="num">Tax in books</th><th>Note</th><th>Your decision</th></tr></thead>
           <tbody>{rep.rows.map((r: any, i: number) => (
             <tr key={i}><td><span className={`pill ${LABEL[r.status]?.[1]}`}>{LABEL[r.status]?.[0]}</span></td><td>{r.party}</td><td>{r.gstin}</td><td>{r.docNo}</td>
-              <td>{r.invoiceId ? <a href={`/review/${r.invoiceId}`}>{r.invoiceNo}</a> : ""}</td><td className="num">{inr(r.tax2bPaise)}</td><td className="num">{inr(r.taxBooksPaise)}</td><td className="muted">{r.note}</td></tr>))}</tbody>
+              <td>{r.invoiceId ? <a href={`/review/${r.invoiceId}`}>{r.invoiceNo}</a> : ""}</td><td className="num">{inr(r.tax2bPaise)}</td><td className="num">{inr(r.taxBooksPaise)}</td><td className="muted">{r.note}</td>
+              <td>{r.decidable && (r.decision
+                ? <><span className={`pill ${r.decision === "ACCEPTED" ? "ok" : "bad"}`} data-testid="decision">{r.decision.toLowerCase()}</span> <span className="muted">{r.decisionReason}</span> <button className="secondary" onClick={() => decide(r.docId, "CLEAR")}>undo</button></>
+                : <><button onClick={() => decide(r.docId, "ACCEPTED")} title="Claim this line in 4A(5) at the 2B tax by head">Accept</button> <button className="secondary" onClick={() => decide(r.docId, "REJECTED")}>Reject</button></>)}</td></tr>))}</tbody>
         </table></>)}
+      {claims && claims.rows.length > 0 && (<>
+        <h2>ITC claim reconciliation — {period}</h2>
+        <div className="why">{claims.rule} <span className="muted">({claims.ref})</span></div>
+        <ClaimTable rows={claims.rows} />
+      </>)}
       {imports.length > 0 && <p className="muted">Imported: {imports.map((i) => `${i.period} (${i.documents} docs)`).join(", ")}</p>}
     </>
   );
 }
+

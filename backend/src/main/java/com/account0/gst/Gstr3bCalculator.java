@@ -15,7 +15,11 @@ public final class Gstr3bCalculator {
 
     /** GSTR-2B input for 4A(5)/4A(4). claimable = 2B lines of THIS 2B period that matched a purchase in the books (all heads agree) and are
      *  marked ITC-available; isd = ISD credit lines; notes = lines left out and why. Null = 2B not imported (4A(5) provisional from books). */
-    public record TwoB(List<Map<String, Object>> claimable, List<Map<String, Object>> isd, List<String> notes) {}
+    public record TwoB(List<Map<String, Object>> claimable, List<Map<String, Object>> isd, List<String> notes, String mode) {
+        public TwoB(List<Map<String, Object>> claimable, List<Map<String, Object>> isd, List<String> notes) { this(claimable, isd, notes, "2B"); }
+        /** mode: 2B (this period's GSTR-2B) | PROVISIONAL (no 2B: books, minus documents claimed elsewhere) | FILED (snapshot of a locked GSTR-3B filing). */
+        public boolean provisional() { return "PROVISIONAL".equals(mode); }
+    }
 
     public static Map<String, Object> compute(List<Map<String, Object>> invoices, String ourState) { return compute(invoices, ourState, null, null); }
 
@@ -44,10 +48,12 @@ public final class Gstr3bCalculator {
         Figure itcRcm = new Figure("4A3", "4A(3) Inward supplies liable to reverse charge (other than 1 & 2)", "Credit of RCM tax paid on domestic reverse-charge purchases.", "Sec 16(1) CGST Act");
         Figure itcIsd = new Figure("4A4", "4A(4) Inward supplies from ISD", "Credit distributed to you by an Input Service Distributor, as shown in your GSTR-2B.", "Sec 20 CGST Act; Rule 39");
         Figure itcOther = new Figure("4A5", "4A(5) All other ITC",
-                twoB == null ? "GST charged by registered suppliers on forward-charge purchases, taken from your books because GSTR-2B for this period is not imported."
-                             : "GST on forward-charge purchases as shown in THIS period's GSTR-2B, for lines that match a purchase in your books on every tax head. Invoices missing from 2B, mismatched lines and lines marked 'ITC not available' are left out (see notes).",
+                twoB == null || twoB.provisional() ? "GST charged by registered suppliers on forward-charge purchases, taken from your books because GSTR-2B for this period is not imported. A document is claimed in exactly one period: documents already claimed in another period (e.g. matched in an earlier GSTR-2B or recorded in a filed return) are left out (see the ITC claim reconciliation)."
+                             : "FILED".equals(twoB.mode()) ? "The ITC recorded when this period's GSTR-3B was filed and locked (claims snapshot). Unlock the filing to recompute it."
+                             : "GST on forward-charge purchases as shown in THIS period's GSTR-2B, for lines that match a purchase in your books on every tax head. Invoices missing from 2B, mismatched lines you have not accepted and lines marked 'ITC not available' are left out, and so is a document already claimed in another period (see notes and the ITC claim reconciliation).",
                 "Sec 16(2)(aa), 16(4) CGST Act; Rule 36(4)");
-        if (twoB == null) { itcOther.status = "PROVISIONAL"; itcOther.caveat = "Provisional — GSTR-2B not imported for this period. ITC is claimable only for invoices in your GSTR-2B (Sec 16(2)(aa)); import it on the ITC page to finalise 4A(5)."; }
+        boolean prov = twoB == null || twoB.provisional();
+        if (prov) { itcOther.status = "PROVISIONAL"; itcOther.caveat = "Provisional — GSTR-2B not imported for this period. ITC is claimable only for invoices in your GSTR-2B (Sec 16(2)(aa)); import it on the ITC page to finalise 4A(5)."; }
         Figure rev17_5 = new Figure("4B1", "4B(1) ITC reversed — Rules 38, 42, 43 & Sec 17(5)", "Purchases you marked as not ITC-eligible (blocked credits under Sec 17(5), personal use). Reported in 4A and reversed here.", "Sec 17(5) CGST Act; CBIC Circular 170/02/2022-GST");
         Figure exemptInInter = new Figure("5-inter", "5 Exempt, nil-rated and non-GST inward supplies — inter-state", "Value of inward supplies that carry no GST (nil/exempt/non-GST, composition suppliers) from suppliers in another state.", "GSTR-3B Table 5");
         Figure exemptInIntra = new Figure("5-intra", "5 Exempt, nil-rated and non-GST inward supplies — intra-state", "Value of inward supplies that carry no GST from suppliers in your state (or with no GSTIN, assumed local).", "GSTR-3B Table 5");
@@ -125,10 +131,10 @@ public final class Gstr3bCalculator {
             notes.add("You have exempt/nil-rated sales this period (3.1(c)). Common input credit used for both taxable and exempt supplies must be partly reversed under Rules 42/43 (4B(1)) — Account0 does not compute this. Verify with your CA. (Exports are zero-rated and need no reversal.)");
 
         Figure itcTotal = sum("4A", "4A Total ITC available", "Sum of 4A(1) to 4A(5).", "Sec 16 CGST Act", itcImpGoods, itcImpSvc, itcRcm, itcIsd, itcOther);
-        if (twoB == null) { itcTotal.status = "PROVISIONAL"; itcTotal.caveat = itcOther.caveat; }
+        if (prov) { itcTotal.status = "PROVISIONAL"; itcTotal.caveat = itcOther.caveat; }
         Figure net = new Figure("4C", "4C Net ITC available (4A − 4B)", "Credit you can use this month to pay output tax.", "Sec 49 CGST Act");
         net.igst = itcTotal.igst - rev17_5.igst; net.cgst = itcTotal.cgst - rev17_5.cgst; net.sgst = itcTotal.sgst - rev17_5.sgst; net.cess = itcTotal.cess - rev17_5.cess;
-        if (twoB == null) { net.status = "PROVISIONAL"; net.caveat = itcOther.caveat; }
+        if (prov) { net.status = "PROVISIONAL"; net.caveat = itcOther.caveat; }
 
         // 6.1 Payment of tax
         long[] fwd = {a.igst + b.igst, a.cgst + b.cgst, a.sgst + b.sgst, a.cess + b.cess};
@@ -140,7 +146,8 @@ public final class Gstr3bCalculator {
         out.put("table32", table32.values().stream().map(Figure::toMap).toList());
         out.put("table4", List.of(itcImpGoods.toMap(), itcImpSvc.toMap(), itcRcm.toMap(), itcIsd.toMap(), itcOther.toMap(), itcTotal.toMap(), rev17_5.toMap(), net.toMap()));
         out.put("table5", List.of(exemptInInter.toMap(), exemptInIntra.toMap()));
-        out.put("itcProvisional", twoB == null);
+        out.put("itcProvisional", prov);
+        out.put("itcMode", twoB == null ? "BOOKS" : twoB.mode());
         Map<String, Object> pay = new LinkedHashMap<>();
         pay.put("rule", "Output tax (other than reverse charge) is first set off against ITC. IGST credit must be used up first (Rule 88A): against IGST, then the rest against CGST and SGST in any order or proportion — Account0 sends it to the head where your own CGST/SGST credit falls short, so the least cash is paid (Circular 98/17/2019-GST). Then CGST credit pays CGST, then IGST; SGST credit pays SGST, then IGST. CGST and SGST credit never cross-utilise. The balance and ALL reverse-charge tax are paid in cash from the electronic cash ledger.");
         pay.put("ref", "Sec 49(5), 49A, 49(4) CGST Act; Rule 88A CGST Rules; Circular 98/17/2019-GST");

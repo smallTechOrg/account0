@@ -21,5 +21,6 @@ public class ItcController {
     }
     @GetMapping("/itc/2b/imports") public List<Map<String, Object>> imports() { return itc.imports(); }
     @GetMapping("/itc/match") public Map<String, Object> match(@RequestParam String period) { return itc.report(period); }
+    @PostMapping("/itc/2b/docs/{id}/decision") public Map<String, Object> decide(@PathVariable long id, @RequestBody Map<String, String> b) { return itc.decide(id, b.get("decision"), b.get("reason")); }
     @GetMapping("/alerts") public List<Map<String, Object>> alerts() { return alerts.alerts(); }
 }
