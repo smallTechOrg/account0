@@ -35,7 +35,7 @@ public class GoogleSources {
 
     public synchronized int syncGmail() {
         if (!auth.connected()) return 0;
-        String label = settings.get("google.gmail_label", "Account0/Invoices");
+        String label = settings.get("google.gmail_label", GMAIL_LABEL_CONTRACT);
         long since = Long.parseLong(settings.get("google.gmail_last_sync_epoch", "0"));
         long started = Instant.now().getEpochSecond();
         int n = 0; Long batch = null;
@@ -59,23 +59,42 @@ public class GoogleSources {
         return n;
     }
 
+    /** Contract with inbox0: inbox0 labels invoice/receipt emails with this Gmail label; account0 only reads it (read-only scope, no email classification here). */
+    static final String GMAIL_LABEL_CONTRACT = "Finance/Invoices";
+    static final String FOLDER_MIME = "application/vnd.google-apps.folder";
+    /** Subfolders whose name matches are walked (others, e.g. Bank, GST, Formats, are skipped: their PDFs are not invoices). */
+    static final String DEFAULT_SUBFOLDER_PATTERN = "invoice|receipt|bill|expense|purchase|sales";
+    static final int MAX_DEPTH = 3;
+
+    /** Imports invoice files from a folder and, recursively, from matching subfolders. Folders themselves are never marked seen, so later files in them are picked up. */
+    int syncDriveFolder(String token, String folderId, java.util.regex.Pattern include, int depth, Long[] batch) throws Exception {
+        int n = 0;
+        for (GoogleTransport.DriveFile f : transport.driveFiles(token, folderId)) {
+            if (FOLDER_MIME.equals(f.mime())) {
+                if (depth < MAX_DEPTH && include.matcher(f.name()).find()) n += syncDriveFolder(token, f.id(), include, depth + 1, batch);
+                continue;
+            }
+            String ext = f.id() + ":" + f.md5();
+            if (seen("DRIVE", ext)) continue;
+            String mime = DocumentService.mimeFor(f.name(), f.mime());
+            if (!MIME.contains(mime)) { mark("DRIVE", ext, f.name(), null); continue; }
+            byte[] bytes = transport.driveDownload(token, f.id());
+            if (batch[0] == null) batch[0] = docs.newBatch("DRIVE");
+            Map<String, Object> d = docs.ingest(bytes, f.name(), mime, "DRIVE", batch[0]);
+            mark("DRIVE", ext, f.name(), d.get("id")); n++;
+        }
+        return n;
+    }
+
     public synchronized int syncDrive() {
         if (!auth.connected()) return 0;
         String folder = settings.get("google.drive_folder_id", "");
         if (folder.isBlank()) return 0;
-        int n = 0; Long batch = null;
+        int n = 0; Long[] batch = {null};
         try {
             String token = auth.accessToken();
-            for (GoogleTransport.DriveFile f : transport.driveFiles(token, folder)) {
-                String ext = f.id() + ":" + f.md5();
-                if (seen("DRIVE", ext)) continue;
-                String mime = DocumentService.mimeFor(f.name(), f.mime());
-                if (!MIME.contains(mime)) { mark("DRIVE", ext, f.name(), null); continue; }
-                byte[] bytes = transport.driveDownload(token, f.id());
-                if (batch == null) batch = docs.newBatch("DRIVE");
-                Map<String, Object> d = docs.ingest(bytes, f.name(), mime, "DRIVE", batch);
-                mark("DRIVE", ext, f.name(), d.get("id")); n++;
-            }
+            java.util.regex.Pattern include = java.util.regex.Pattern.compile(settings.get("google.drive_subfolder_pattern", DEFAULT_SUBFOLDER_PATTERN), java.util.regex.Pattern.CASE_INSENSITIVE);
+            n = syncDriveFolder(token, folder, include, 0, batch);
             settings.set("google.drive_last_sync_result", Instant.now() + " imported " + n);
         } catch (Exception e) { log.warn("Drive sync failed: {}", e.getMessage()); settings.set("google.drive_last_sync_result", Instant.now() + " FAILED: " + e.getMessage()); throw new IllegalStateException("Drive sync failed: " + e.getMessage(), e); }
         return n;
@@ -95,7 +114,7 @@ public class GoogleSources {
         m.put("configured", auth.configured()); m.put("connected", auth.connected()); m.put("account", auth.email());
         m.put("stub", !auth.connected());       // UI shows the dashed STUB box until a real account is connected
         m.put("untestedAgainstLiveGoogle", true);
-        m.put("target", gmail ? "label: " + settings.get("google.gmail_label", "Account0/Invoices") : "folder id: " + (settings.get("google.drive_folder_id", "").isBlank() ? "(not set)" : settings.get("google.drive_folder_id", "")));
+        m.put("target", gmail ? "label: " + settings.get("google.gmail_label", GMAIL_LABEL_CONTRACT) : "folder id: " + (settings.get("google.drive_folder_id", "").isBlank() ? "(not set)" : settings.get("google.drive_folder_id", "")));
         m.put("lastSync", settings.get(gmail ? "google.gmail_last_sync_result" : "google.drive_last_sync_result", "never"));
         m.put("message", !auth.configured() ? "STUB: not configured. Create a Google Cloud OAuth client (type: Web) with redirect URI " + props.getRedirectUri() + ", then set ACCOUNT0_GOOGLE_CLIENT_ID and ACCOUNT0_GOOGLE_CLIENT_SECRET in .env and restart."
                 : !auth.connected() ? "STUB: credentials present but no account connected. Click 'Connect Google' to grant read-only access."

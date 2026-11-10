@@ -33,13 +33,14 @@ class P8GoogleTest {
         public final List<String> calls = new ArrayList<>();
         public List<Message> messages = new ArrayList<>();
         public List<DriveFile> files = new ArrayList<>();
+        public Map<String, List<DriveFile>> byFolder = new HashMap<>();
         public String lastVerifier, lastCode;
         public Tokens exchangeCode(String code, String verifier, String redirectUri) { calls.add("exchange:" + code); lastCode = code; lastVerifier = verifier; return new Tokens("ACCESS-TOKEN-1", "REFRESH-TOKEN-1", 3600, "gmail.readonly drive.readonly"); }
         public Tokens refresh(String refreshToken) { calls.add("refresh:" + refreshToken); return new Tokens("ACCESS-TOKEN-2", refreshToken, 3600, "x"); }
         public String accountEmail(String t) { return "founder@example.com"; }
         public List<Message> gmailMessages(String t, String label, long after) { calls.add("gmail:" + label + ":" + t); return messages; }
         public byte[] gmailAttachment(String t, String m, String a) { return ("PDFBYTES-" + m + "-" + a).getBytes(); }
-        public List<DriveFile> driveFiles(String t, String folderId) { calls.add("drive:" + folderId); return files; }
+        public List<DriveFile> driveFiles(String t, String folderId) { calls.add("drive:" + folderId); return byFolder.getOrDefault(folderId, files); }
         public byte[] driveDownload(String t, String id) { return ("DRIVEBYTES-" + id).getBytes(); }
         public void revoke(String token) { calls.add("revoke:" + token); }
     }
@@ -98,6 +99,14 @@ class P8GoogleTest {
         assertThat(rest.postForObject("/api/google/sync/drive", null, Map.class).get("imported")).isEqualTo(1);
         assertThat(google.calls).contains("drive:FOLDER_123");
         assertThat(rest.postForObject("/api/google/sync/drive", null, Map.class).get("imported")).isEqualTo(0);
+        // Subfolders: invoice/receipt folders are walked (folders never marked seen); Bank/GST folders are skipped
+        google.byFolder.put("FOLDER_123", List.of(new GoogleTransport.DriveFile("sub-in", "Invoices - In", "application/vnd.google-apps.folder", ""), new GoogleTransport.DriveFile("sub-bank", "Bank", "application/vnd.google-apps.folder", "")));
+        google.byFolder.put("sub-in", List.of(new GoogleTransport.DriveFile("f3", "aws-oct.pdf", "application/pdf", "md5c")));
+        google.byFolder.put("sub-bank", List.of(new GoogleTransport.DriveFile("f4", "statement.pdf", "application/pdf", "md5d")));
+        assertThat(rest.postForObject("/api/google/sync/drive", null, Map.class).get("imported")).isEqualTo(1);
+        assertThat(google.calls).contains("drive:sub-in").doesNotContain("drive:sub-bank");
+        google.byFolder.put("sub-in", List.of(new GoogleTransport.DriveFile("f3", "aws-oct.pdf", "application/pdf", "md5c"), new GoogleTransport.DriveFile("f5", "gcp-oct.pdf", "application/pdf", "md5e")));
+        assertThat(rest.postForObject("/api/google/sync/drive", null, Map.class).get("imported")).isEqualTo(1);
 
         // expired access token is refreshed before use
         jdbc.update("UPDATE oauth_token SET expires_at='2000-01-01T00:00:00Z'");
