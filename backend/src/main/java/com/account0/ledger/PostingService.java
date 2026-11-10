@@ -124,7 +124,29 @@ public class PostingService {
         for (long id : staleIds("payroll_deposit", dep)) ledger.unpost("payroll_deposit", id);
     }
 
-    public void syncAll() { syncBank(); syncTds(); syncPayroll(); }
+    public static final String ADVANCE_SUSPENSE = "Bank / cash (advance receipts not matched to a bank line)";
+    /** Advance receipts: Dr Bank / Cr Advance from customers; adjustment against an invoice: Dr Advance / Cr Receivable.
+     *  The GST on a taxed advance is reported in the returns (Table 11 / 3.1(a)) and booked with the invoice; it is not posted separately. */
+    public void syncAdvances() {
+        Set<Long> rec = new HashSet<>(), adj = new HashSet<>();
+        for (Map<String, Object> a : jdbc.queryForList("SELECT a.*, t.account_label FROM advance_receipt a LEFT JOIN bank_txn t ON t.id=a.bank_txn_id WHERE a.tenant_id=? AND a.status='ACTIVE' ORDER BY a.id", Tenant.current())) {
+            long id = l(a.get("id")), g = l(a.get("gross_paise"));
+            String bank = a.get("account_label") != null ? "Bank: " + a.get("account_label") : ADVANCE_SUSPENSE, cust = "Advance from customer: " + party(a.get("customer_name"));
+            rec.add(id);
+            String narr = "Advance received — " + party(a.get("customer_name")) + " (" + a.get("kind") + ")";
+            audited(ledger.postGeneric("advance", id, (String) a.get("receipt_date"), narr, List.of(new Line(bank, g, 0), new Line(cust, 0, g))), "advance", id, narr);
+            for (Map<String, Object> x : jdbc.queryForList("SELECT x.*, i.invoice_no, i.invoice_date, i.counterparty_name FROM advance_adjustment x JOIN invoice i ON i.id=x.invoice_id WHERE x.advance_id=? ORDER BY x.id", id)) {
+                long xid = l(x.get("id")), xg = l(x.get("gross_paise"));
+                adj.add(xid);
+                String n2 = "Advance adjusted against " + x.get("invoice_no") + " — " + party(a.get("customer_name"));
+                audited(ledger.postGeneric("advance_adj", xid, (String) x.get("invoice_date"), n2, List.of(new Line(cust, xg, 0), new Line("Receivable: " + party(x.get("counterparty_name")), 0, xg))), "advance_adj", xid, n2);
+            }
+        }
+        for (long id : staleIds("advance", rec)) ledger.unpost("advance", id);
+        for (long id : staleIds("advance_adj", adj)) ledger.unpost("advance_adj", id);
+    }
+
+    public void syncAll() { syncBank(); syncTds(); syncPayroll(); syncAdvances(); }
 
     private List<Long> staleIds(String refType, Set<Long> keep) {
         List<Long> out = new ArrayList<>();

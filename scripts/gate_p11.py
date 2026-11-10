@@ -86,4 +86,20 @@ check(fig(g, "table4", "4A5")["igst_paise"] == 170000, "accepted AMOUNT_MISMATCH
 check(any("REJECTED by you" in n for n in g["notes"]), "rejection shown in the notes")
 check(sum(1 for a in call("GET", "/api/audit") if a.get("entity") == "gstr2b_doc" and a.get("action") == "decision") >= 2, "decisions are in the audit trail")
 
+# ---- 3. advances (GSTR-1 Table 11, 3B 3.1(a)) ----
+adv = call("POST", "/api/advances", {"receipt_date": "2026-06-15", "customer_name": "Bluepeak Retail", "customer_gstin": BUYER, "place_of_supply": "29", "kind": "DOMESTIC", "gst_rate": "18", "gross_paise": 11800000})
+check(adv.get("taxable_paise") == 10000000 and adv.get("cgst_paise") == 900000, f"domestic services advance 1,18,000: taxable 1,00,000 + CGST/SGST 9,000 each {adv.get('error', '')}")
+lut = call("POST", "/api/advances", {"receipt_date": "2026-06-16", "customer_name": "Globex Inc", "kind": "EXPORT_LUT", "gst_rate": "0", "gross_paise": 5000000})
+check(lut.get("taxedAtReceipt") is False, "export advance under LUT carries no tax")
+j = json.loads(call("GET", "/api/gst/1/portal.json?period=2026-06", raw=True))
+check(len(j.get("at", [])) == 1 and j["at"][0]["pos"] == "29" and j["at"][0]["itms"][0]["ad_amt"] == 100000.0, "GSTR-1 JSON 'at' (11A) has the domestic advance only")
+check(fig(call("GET", "/api/gst/3b?period=2026-06"), "table31", "3.1a")["cgst_paise"] == 900000, "3B Jun 3.1(a) carries the advance's tax")
+s_inv = confirmed({"direction": "SALE", "invoice_no": "ACW/27/01", "invoice_date": "2026-07-05", "counterparty_name": "Bluepeak Retail", "counterparty_gstin": BUYER, "place_of_supply": "29", "supply_type": "B2B",
+                   "reverse_charge": 0, "taxable_paise": 10000000, "cgst_paise": 900000, "sgst_paise": 900000, "total_paise": 11800000, "category": "Income",
+                   "lines": [{"description": "SaaS", "hsn_sac": "998314", "gst_rate": "18", "taxable_paise": 10000000, "cgst_paise": 900000, "sgst_paise": 900000}]})
+call("POST", f"/api/advances/{adv['id']}/adjust", {"invoiceId": s_inv["id"]})
+j = json.loads(call("GET", "/api/gst/1/portal.json?period=2026-07", raw=True))
+check(len(j.get("txpd", [])) == 1 and j["txpd"][0]["itms"][0]["camt"] == 9000.0 and "at" not in j, "Jul GSTR-1 JSON 'txpd' (11B) adjusts the June advance")
+check(fig(call("GET", "/api/gst/3b?period=2026-07"), "table31", "3.1a")["cgst_paise"] == 0, "Jul 3B 3.1(a): invoice tax less the tax already paid on the advance = 0")
+
 print("P11 flow OK")

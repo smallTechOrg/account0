@@ -17,7 +17,10 @@ public class GstService {
     private final AuditService audit;
     private final com.account0.itc.ItcService itc;
     private final ItcClaimService claims;
-    public GstService(JdbcTemplate jdbc, CompanyService company, AuditService audit, com.account0.itc.ItcService itc, ItcClaimService claims) { this.jdbc = jdbc; this.company = company; this.audit = audit; this.itc = itc; this.claims = claims; }
+    private final com.account0.advance.AdvanceService advances;
+    public GstService(JdbcTemplate jdbc, CompanyService company, AuditService audit, com.account0.itc.ItcService itc, ItcClaimService claims, com.account0.advance.AdvanceService advances) {
+        this.jdbc = jdbc; this.company = company; this.audit = audit; this.itc = itc; this.claims = claims; this.advances = advances;
+    }
 
     static void checkPeriod(String p) { if (p == null || !p.matches("\\d{4}-(0[1-9]|1[0-2])")) throw ApiException.bad("period must be YYYY-MM"); }
 
@@ -122,7 +125,7 @@ public class GstService {
         r.put("warnings", warnings(period));
         List<Map<String, Object>> rec = new ArrayList<>();
         Gstr3bCalculator.TwoB tb = twoB(period, rec);
-        r.putAll(Gstr3bCalculator.compute(confirmed3b(period), Gstin.stateCode(company.gstin()), period, tb));
+        r.putAll(Gstr3bCalculator.compute(confirmed3b(period), Gstin.stateCode(company.gstin()), period, tb, advances.received(period), advances.adjusted(period)));
         r.put("itcClaims", Map.of("rule", "A purchase document's ITC is claimed in exactly one return period: the period recorded by a filed (locked) GSTR-3B, otherwise the earliest of (a) its own period while no GSTR-2B is imported for it (provisional, from books) and (b) each GSTR-2B period in which it matched or you accepted the 2B line. Every other candidate period leaves it out.",
                 "ref", "Sec 16(2)(aa), 16(4) CGST Act; Rule 36(4)", "rows", rec));
         @SuppressWarnings("unchecked") List<String> notes = (List<String>) r.get("notes");
@@ -153,6 +156,7 @@ public class GstService {
                 if (!t.isEmpty()) i.put("original_total_paise", t.get(0));
             }
         r.putAll(Gstr1Calculator.computeDocs(inv, company.gstin(), Gstin.stateCode(company.gstin()), period, cancelled));
+        Gstr1Calculator.table11(r, advances.received(period), advances.adjusted(period), Gstin.stateCode(company.gstin()));
         return r;
     }
 

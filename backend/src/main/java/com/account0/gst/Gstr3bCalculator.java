@@ -33,7 +33,10 @@ public final class Gstr3bCalculator {
         } catch (Exception e) { return false; }
     }
 
-    public static Map<String, Object> compute(List<Map<String, Object>> invoices, String ourState, String period, TwoB twoB) {
+    public static Map<String, Object> compute(List<Map<String, Object>> invoices, String ourState, String period, TwoB twoB) { return compute(invoices, ourState, period, twoB, List.of(), List.of()); }
+
+    /** advReceived / advAdjusted: GSTR-1 Table 11A / 11B rows (taxed advances; see AdvanceService) — added to / subtracted from 3.1(a). */
+    public static Map<String, Object> compute(List<Map<String, Object>> invoices, String ourState, String period, TwoB twoB, List<Map<String, Object>> advReceived, List<Map<String, Object>> advAdjusted) {
         Figure a = new Figure("3.1a", "3.1(a) Outward taxable supplies (other than zero rated, nil rated and exempted)",
                 "Domestic sales (B2B + B2C) at taxable value, with the tax charged on them. Credit notes reduce, debit notes increase.", "Sec 9 CGST Act; Sec 5 IGST Act; Sec 34 (credit/debit notes)");
         Figure b = new Figure("3.1b", "3.1(b) Outward taxable supplies (zero rated)",
@@ -111,6 +114,10 @@ public final class Gstr3bCalculator {
                 case UNREGISTERED -> notes.add("Invoice " + inv.get("invoice_no") + " (" + inv.get("counterparty_name") + ") is a purchase from an unregistered supplier: no GST, not reported in 3B.");
             }
         }
+        for (Map<String, Object> ad : advReceived) a.add(ad, 1, l(ad.get("taxable_paise")), l(ad.get("igst_paise")), l(ad.get("cgst_paise")), l(ad.get("sgst_paise")), l(ad.get("cess_paise")));
+        for (Map<String, Object> ad : advAdjusted) a.add(ad, -1, l(ad.get("taxable_paise")), l(ad.get("igst_paise")), l(ad.get("cgst_paise")), l(ad.get("sgst_paise")), l(ad.get("cess_paise")));
+        if (!advReceived.isEmpty() || !advAdjusted.isEmpty())
+            notes.add("3.1(a) includes tax on advances received for services this period (GSTR-1 Table 11A, taxed on receipt under Sec 13(2)) and subtracts the tax on earlier advances adjusted against this period's invoices (Table 11B), so the invoice's tax is not paid twice.");
         if (twoB != null) {
             for (Map<String, Object> ln : twoB.claimable()) {
                 long sign = "CREDIT_NOTE".equals(ln.get("doc_type")) ? -1 : 1;

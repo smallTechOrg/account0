@@ -120,9 +120,10 @@ public class BankService {
     }
     public Map<String, Object> unmatch(long txnId) {
         Map<String, Object> t = txn(txnId);
-        jdbc.update("UPDATE bank_txn SET status='UNMATCHED', matched_invoice_id=NULL, match_source=NULL, match_score=NULL, match_note=NULL, ignore_reason=NULL, customer_tds_paise=0 WHERE tenant_id=? AND id=?", Tenant.current(), txnId);
-        audit.record("user", "bank_txn", txnId, "unmatch", "invoice", t.get("matched_invoice_id"), null, "");
-        posting.syncBank();
+        jdbc.update("UPDATE bank_txn SET status='UNMATCHED', matched_invoice_id=NULL, match_source=NULL, match_score=NULL, match_note=NULL, ignore_reason=NULL, customer_tds_paise=0, match_kind=NULL, match_ref=NULL, bank_charges_paise=0, forex_gain_paise=0 WHERE tenant_id=? AND id=?", Tenant.current(), txnId);
+        jdbc.update("UPDATE advance_receipt SET bank_txn_id=NULL WHERE tenant_id=? AND bank_txn_id=?", Tenant.current(), txnId);   // the advance stays, its cash side becomes unreconciled
+        audit.record("user", "bank_txn", txnId, "unmatch", t.get("match_kind") == null ? "invoice" : String.valueOf(t.get("match_kind")).toLowerCase(Locale.ROOT), t.get("matched_invoice_id") != null ? t.get("matched_invoice_id") : t.get("match_ref"), null, "");
+        posting.syncAll();
         return txn(txnId);
     }
     public Map<String, Object> ignore(long txnId, String reason) {

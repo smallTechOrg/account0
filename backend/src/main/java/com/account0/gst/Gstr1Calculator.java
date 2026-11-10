@@ -242,6 +242,41 @@ public final class Gstr1Calculator {
         return new Table13(docDet, series, total, canc, notes);
     }
 
+    /** GSTR-1 Table 11A (advances received, "at") and 11B (advances adjusted, "txpd"), by place of supply and rate. Mutates result. */
+    @SuppressWarnings("unchecked")
+    public static void table11(Map<String, Object> result, List<Map<String, Object>> received, List<Map<String, Object>> adjusted, String ourState) {
+        Figure fa = new Figure("11A", "Table 11A — Advances received (tax liability on advances)", "Advances received for services this period with no invoice issued in the same period, tax-exclusive value (ad_amt) and tax by place of supply and rate. Sec 13(2): for services, tax is due on receipt. Advances for goods and export advances under LUT carry no tax and are not reported.", "Sec 13(2) CGST Act; Notification 66/2017-CT (goods); Rule 59(4)");
+        Figure fb = new Figure("11B", "Table 11B — Advances adjusted against invoices", "Tax already paid on earlier advances, adjusted against invoices issued this period (reduces this period's liability).", "Sec 13(2) CGST Act; Rule 59(4)");
+        List<Map<String, Object>> tables = new ArrayList<>((List<Map<String, Object>>) result.get("tables"));
+        Map<String, Object> json = (Map<String, Object>) result.get("portalJson");
+        for (Object[] o : new Object[][]{{received, fa, "at"}, {adjusted, fb, "txpd"}}) {
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) o[0]; Figure f = (Figure) o[1];
+            Map<String, Map<String, long[]>> byPos = new TreeMap<>();
+            for (Map<String, Object> r : rows) {
+                f.add(r, 1, l(r.get("taxable_paise")), l(r.get("igst_paise")), l(r.get("cgst_paise")), l(r.get("sgst_paise")), 0);
+                long[] a = byPos.computeIfAbsent((String) r.get("place_of_supply"), k -> new TreeMap<>(Comparator.comparing(BigDecimal::new))).computeIfAbsent((String) r.get("gst_rate"), k -> new long[4]);
+                a[0] += l(r.get("taxable_paise")); a[1] += l(r.get("igst_paise")); a[2] += l(r.get("cgst_paise")); a[3] += l(r.get("sgst_paise"));
+            }
+            tables.add(f.toMap());
+            if (byPos.isEmpty()) continue;
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (var e : byPos.entrySet()) {
+                List<Map<String, Object>> itms = new ArrayList<>();
+                for (var r : e.getValue().entrySet()) {
+                    long[] a = r.getValue();
+                    Map<String, Object> it = new LinkedHashMap<>();
+                    it.put("rt", new BigDecimal(r.getKey())); it.put("ad_amt", r(a[0])); it.put("iamt", r(a[1])); it.put("camt", r(a[2])); it.put("samt", r(a[3])); it.put("csamt", r(0));
+                    itms.add(it);
+                }
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("pos", e.getKey()); m.put("sply_ty", ourState != null && ourState.equals(e.getKey()) ? "INTRA" : "INTER"); m.put("itms", itms);
+                out.add(m);
+            }
+            json.put((String) o[2], out);
+        }
+        result.put("tables", tables);
+    }
+
     static Figure fig(Map<String, Figure> m, String k, String label, String rule, String ref) { Figure f = new Figure(k, label, rule, ref); m.put(k, f); return f; }
 
     static void hsn(Map<String, Map<String, Object>> agg, Map<String, Object> inv, long sign) {
