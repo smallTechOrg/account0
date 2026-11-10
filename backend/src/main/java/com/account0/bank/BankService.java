@@ -17,8 +17,8 @@ import java.util.*;
 
 @Service
 public class BankService {
-    private final JdbcTemplate jdbc; private final AuditService audit; private final ObjectMapper om;
-    public BankService(JdbcTemplate jdbc, AuditService audit, ObjectMapper om) { this.jdbc = jdbc; this.audit = audit; this.om = om; }
+    private final JdbcTemplate jdbc; private final AuditService audit; private final ObjectMapper om; private final com.account0.ledger.PostingService posting;
+    public BankService(JdbcTemplate jdbc, AuditService audit, ObjectMapper om, com.account0.ledger.PostingService posting) { this.jdbc = jdbc; this.audit = audit; this.om = om; this.posting = posting; }
 
     public Map<String, Object> preview(byte[] bytes, String filename) {
         BankParser.Table t = BankParser.read(bytes, filename);
@@ -62,7 +62,7 @@ public class BankService {
         List<BankMatcher.Invoice> out = new ArrayList<>();
         for (Map<String, Object> r : jdbc.queryForList("""
                 SELECT i.id, i.direction, i.invoice_no, i.invoice_date, i.counterparty_name, i.total_paise,
-                  i.total_paise - COALESCE((SELECT SUM(CASE WHEN i.direction='SALE' THEN t.credit_paise ELSE t.debit_paise END) FROM bank_txn t WHERE t.matched_invoice_id=i.id AND t.status='MATCHED'),0) AS outstanding
+                  i.total_paise - COALESCE((SELECT SUM(CASE WHEN i.direction='SALE' THEN t.credit_paise + t.customer_tds_paise ELSE t.debit_paise END) FROM bank_txn t WHERE t.matched_invoice_id=i.id AND t.status='MATCHED'),0) - COALESCE((SELECT SUM(e.tds_paise) FROM tds_entry e WHERE e.invoice_id=i.id AND e.status='DEDUCT'),0) AS outstanding
                 FROM invoice i WHERE i.tenant_id=? AND i.status='CONFIRMED' AND i.doc_type='INVOICE' AND i.invoice_date IS NOT NULL ORDER BY i.invoice_date""", Tenant.current()))
             out.add(new BankMatcher.Invoice(((Number) r.get("id")).longValue(), "SALE".equals(r.get("direction")), (String) r.get("invoice_no"), (String) r.get("invoice_date"), (String) r.get("counterparty_name"), ((Number) r.get("outstanding")).longValue()));
         return out;
@@ -82,10 +82,14 @@ public class BankService {
             if (BankMatcher.unambiguousStrong(ranked)) { jdbc.update("UPDATE bank_txn SET status='MATCHED', matched_invoice_id=?, match_source='AUTO', match_score=?, match_note=? WHERE id=?", c.invoiceId(), c.score(), c.note(), t.id()); auto++; }
             else { jdbc.update("UPDATE bank_txn SET status='SUGGESTED', matched_invoice_id=?, match_score=?, match_note=? WHERE id=?", c.invoiceId(), c.score(), c.note(), t.id()); suggested++; }
         }
+        posting.syncBank();
         return Map.of("autoMatched", auto, "suggested", suggested);
     }
 
-    public Map<String, Object> match(long txnId, long invoiceId) {
+    public Map<String, Object> match(long txnId, long invoiceId) { return match(txnId, invoiceId, null); }
+
+    /** customerTdsPaise: TDS the customer withheld from this receipt (receipt = invoice - TDS); sales receipts only. */
+    public Map<String, Object> match(long txnId, long invoiceId, Long customerTdsPaise) {
         Map<String, Object> t = txn(txnId);
         List<Map<String, Object>> inv = jdbc.queryForList("SELECT id, direction, invoice_no FROM invoice WHERE tenant_id=? AND id=? AND status='CONFIRMED'", Tenant.current(), invoiceId);
         if (inv.isEmpty()) throw ApiException.bad("Invoice must exist and be confirmed.");
@@ -93,19 +97,38 @@ public class BankService {
         if (receipt != "SALE".equals(inv.get(0).get("direction"))) throw ApiException.bad(receipt ? "A receipt can only be matched to a sales invoice." : "A payment can only be matched to a purchase invoice.");
         jdbc.update("UPDATE bank_txn SET status='MATCHED', matched_invoice_id=?, match_source='USER', match_note=COALESCE(match_note,'matched by you') WHERE tenant_id=? AND id=?", invoiceId, Tenant.current(), txnId);
         audit.record("user", "bank_txn", txnId, "match", "invoice", t.get("matched_invoice_id"), invoiceId, "bank line matched to invoice " + inv.get(0).get("invoice_no"));
+        if (customerTdsPaise != null) setCustomerTds(txnId, customerTdsPaise);
+        else posting.syncBank();
+        return txn(txnId);
+    }
+    public Map<String, Object> setCustomerTds(long txnId, long tdsPaise) {
+        Map<String, Object> t = txn(txnId);
+        if (tdsPaise < 0) throw ApiException.bad("TDS cannot be negative.");
+        if (((Number) t.get("credit_paise")).longValue() <= 0) throw ApiException.bad("Customer TDS applies to receipts (credits) only.");
+        if (tdsPaise > 0 && !"MATCHED".equals(t.get("status"))) throw ApiException.bad("Match the receipt to its invoice first.");
+        Object inv = t.get("matched_invoice_id");
+        if (inv != null) {
+            long total = ((Number) jdbc.queryForMap("SELECT total_paise FROM invoice WHERE id=?", inv).get("total_paise")).longValue();
+            if (((Number) t.get("credit_paise")).longValue() + tdsPaise > total) throw ApiException.bad("Receipt plus TDS exceeds the invoice total.");
+        }
+        jdbc.update("UPDATE bank_txn SET customer_tds_paise=? WHERE tenant_id=? AND id=?", tdsPaise, Tenant.current(), txnId);
+        audit.record("user", "bank_txn", txnId, "customer_tds", "customer_tds_paise", t.get("customer_tds_paise"), tdsPaise, "TDS withheld by customer on this receipt");
+        posting.syncBank();
         return txn(txnId);
     }
     public Map<String, Object> unmatch(long txnId) {
         Map<String, Object> t = txn(txnId);
-        jdbc.update("UPDATE bank_txn SET status='UNMATCHED', matched_invoice_id=NULL, match_source=NULL, match_score=NULL, match_note=NULL, ignore_reason=NULL WHERE tenant_id=? AND id=?", Tenant.current(), txnId);
+        jdbc.update("UPDATE bank_txn SET status='UNMATCHED', matched_invoice_id=NULL, match_source=NULL, match_score=NULL, match_note=NULL, ignore_reason=NULL, customer_tds_paise=0 WHERE tenant_id=? AND id=?", Tenant.current(), txnId);
         audit.record("user", "bank_txn", txnId, "unmatch", "invoice", t.get("matched_invoice_id"), null, "");
+        posting.syncBank();
         return txn(txnId);
     }
     public Map<String, Object> ignore(long txnId, String reason) {
         if (reason == null || reason.isBlank()) throw ApiException.bad("Say why (e.g. bank charges, salary, transfer between own accounts).");
         txn(txnId);
-        jdbc.update("UPDATE bank_txn SET status='IGNORED', matched_invoice_id=NULL, ignore_reason=? WHERE tenant_id=? AND id=?", reason, Tenant.current(), txnId);
+        jdbc.update("UPDATE bank_txn SET status='IGNORED', matched_invoice_id=NULL, customer_tds_paise=0, ignore_reason=? WHERE tenant_id=? AND id=?", reason, Tenant.current(), txnId);
         audit.record("user", "bank_txn", txnId, "ignore", "reason", null, reason, "");
+        posting.syncBank();
         return txn(txnId);
     }
     Map<String, Object> txn(long id) {

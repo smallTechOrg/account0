@@ -28,7 +28,8 @@ public class BankController {
     @GetMapping("/txns") public List<Map<String, Object>> txns(@RequestParam(required = false) String status) { return svc.txns(status); }
     @GetMapping("/summary") public Map<String, Object> summary() { return svc.summary(); }
     @GetMapping("/txns/{id}/candidates") public List<Map<String, Object>> candidates(@PathVariable long id) { return svc.candidates(id); }
-    @PostMapping("/txns/{id}/match") public Map<String, Object> match(@PathVariable long id, @RequestBody Map<String, Object> b) { return svc.match(id, ((Number) b.get("invoiceId")).longValue()); }
+    @PostMapping("/txns/{id}/match") public Map<String, Object> match(@PathVariable long id, @RequestBody Map<String, Object> b) { return svc.match(id, ((Number) b.get("invoiceId")).longValue(), b.get("customerTdsPaise") == null ? null : ((Number) b.get("customerTdsPaise")).longValue()); }
+    @PostMapping("/txns/{id}/customer-tds") public Map<String, Object> customerTds(@PathVariable long id, @RequestBody Map<String, Object> b) { return svc.setCustomerTds(id, ((Number) b.get("tdsPaise")).longValue()); }
     @PostMapping("/txns/{id}/unmatch") public Map<String, Object> unmatch(@PathVariable long id) { return svc.unmatch(id); }
     @PostMapping("/txns/{id}/ignore") public Map<String, Object> ignore(@PathVariable long id, @RequestBody Map<String, String> b) { return svc.ignore(id, b.get("reason")); }
     @PostMapping("/rematch") public Map<String, Object> rematch() { return svc.autoMatch(); }

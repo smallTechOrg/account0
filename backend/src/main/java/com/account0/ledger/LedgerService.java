@@ -86,6 +86,30 @@ public class LedgerService {
         return jid;
     }
 
+    /**
+     * Idempotent generic posting: replaces the journal for (refType, refId) only if its lines differ.
+     * Lines must balance (throws otherwise). Returns true if the books changed. Empty/zero lines removes the journal.
+     */
+    public boolean postGeneric(String refType, long refId, String date, String narration, List<Line> lines) {
+        List<Line> ls = lines.stream().filter(x -> x.debit() != 0 || x.credit() != 0).toList();
+        long dr = ls.stream().mapToLong(Line::debit).sum(), cr = ls.stream().mapToLong(Line::credit).sum();
+        if (dr != cr) throw new IllegalStateException("Unbalanced journal " + refType + ":" + refId + " dr=" + dr + " cr=" + cr);
+        List<Map<String, Object>> ex = jdbc.queryForList("SELECT id, entry_date, narration FROM journal WHERE tenant_id=? AND ref_type=? AND ref_id=?", Tenant.current(), refType, refId);
+        if (ls.isEmpty()) { if (ex.isEmpty()) return false; unpost(refType, refId); return true; }
+        if (ex.size() == 1) {
+            List<Map<String, Object>> old = jdbc.queryForList("SELECT account, debit_paise, credit_paise FROM journal_line WHERE journal_id=? ORDER BY id", ex.get(0).get("id"));
+            List<Line> oldL = old.stream().map(r -> new Line((String) r.get("account"), l(r.get("debit_paise")), l(r.get("credit_paise")))).toList();
+            if (oldL.equals(ls) && date.equals(ex.get(0).get("entry_date")) && Objects.equals(narration, ex.get(0).get("narration"))) return false;
+        }
+        unpost(refType, refId);
+        GeneratedKeyHolder kh = new GeneratedKeyHolder();
+        jdbc.update(c -> { PreparedStatement ps = c.prepareStatement("INSERT INTO journal(tenant_id, entry_date, period, ref_type, ref_id, narration) VALUES (?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+            ps.setLong(1, Tenant.current()); ps.setString(2, date); ps.setString(3, date.substring(0, 7)); ps.setString(4, refType); ps.setLong(5, refId); ps.setString(6, narration); return ps; }, kh);
+        long jid = kh.getKey().longValue();
+        for (Line x : ls) jdbc.update("INSERT INTO journal_line(tenant_id, journal_id, account, debit_paise, credit_paise) VALUES (?,?,?,?,?)", Tenant.current(), jid, x.account(), x.debit(), x.credit());
+        return true;
+    }
+
     public void unpost(String refType, long refId) {
         jdbc.update("DELETE FROM journal_line WHERE journal_id IN (SELECT id FROM journal WHERE tenant_id=? AND ref_type=? AND ref_id=?)", Tenant.current(), refType, refId);
         jdbc.update("DELETE FROM journal WHERE tenant_id=? AND ref_type=? AND ref_id=?", Tenant.current(), refType, refId);

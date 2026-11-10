@@ -12,8 +12,8 @@ import java.util.*;
 
 @Service
 public class TdsService {
-    private final JdbcTemplate jdbc; private final AuditService audit; private final RuleService rules;
-    public TdsService(JdbcTemplate jdbc, AuditService audit, RuleService rules) { this.jdbc = jdbc; this.audit = audit; this.rules = rules; }
+    private final JdbcTemplate jdbc; private final AuditService audit; private final RuleService rules; private final com.account0.ledger.PostingService posting;
+    public TdsService(JdbcTemplate jdbc, AuditService audit, RuleService rules, com.account0.ledger.PostingService posting) { this.jdbc = jdbc; this.audit = audit; this.rules = rules; this.posting = posting; }
 
     public static String fyOf(String isoDate) {
         LocalDate d = LocalDate.parse(isoDate);
@@ -104,6 +104,7 @@ public class TdsService {
             for (TdsEngine.Result x : res)
                 jdbc.update("UPDATE tds_entry SET rate_bp=?, tds_paise=?, status=?, reason=? WHERE id=?", x.rateBp(), x.tdsPaise(), x.status(), x.reason(), x.id());
         }
+        posting.syncTds();
     }
 
     public List<Map<String, Object>> register(String fy, Integer quarter) {
@@ -119,6 +120,7 @@ public class TdsService {
         int n = jdbc.update("UPDATE tds_entry SET deposited_on=?, challan_no=?, bsr_code=? WHERE tenant_id=? AND id=? AND tds_paise>0", date, challan, bsr, Tenant.current(), entryId);
         if (n == 0) throw ApiException.bad("Nothing to deposit for entry " + entryId + " (no TDS due).");
         audit.record("user", "tds_entry", entryId, "deposit", "deposited_on", null, date, "challan " + challan);
+        posting.syncTds();
         return jdbc.queryForMap("SELECT * FROM tds_entry WHERE id=?", entryId);
     }
 

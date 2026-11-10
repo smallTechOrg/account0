@@ -14,8 +14,8 @@ import java.util.*;
 
 @Service
 public class PayrollService {
-    private final JdbcTemplate jdbc; private final AuditService audit;
-    public PayrollService(JdbcTemplate jdbc, AuditService audit) { this.jdbc = jdbc; this.audit = audit; }
+    private final JdbcTemplate jdbc; private final AuditService audit; private final com.account0.ledger.PostingService posting;
+    public PayrollService(JdbcTemplate jdbc, AuditService audit, com.account0.ledger.PostingService posting) { this.jdbc = jdbc; this.audit = audit; this.posting = posting; }
 
     static List<String> splitCsv(String line) {
         List<String> out = new ArrayList<>(); StringBuilder cur = new StringBuilder(); boolean q = false;
@@ -79,6 +79,7 @@ public class PayrollService {
                 ytdGross += gross; ytdTds += tds;
             }
         }
+        posting.syncPayroll();
     }
 
     public List<Map<String, Object>> lines(String fy) {
@@ -93,6 +94,7 @@ public class PayrollService {
         if (date == null || !date.matches("\\d{4}-\\d{2}-\\d{2}")) throw ApiException.bad("deposit date YYYY-MM-DD required");
         int n = jdbc.update("UPDATE payroll_line SET deposited_on=?, challan_no=? WHERE tenant_id=? AND month=? AND tds_paise>0", date, challan, Tenant.current(), month);
         audit.record("user", "payroll", month, "deposit", "deposited_on", null, date, "challan " + challan);
+        posting.syncPayroll();
         return Map.of("month", month, "updated", n);
     }
 

@@ -35,10 +35,12 @@ public class InvoiceService {
     private final CompanyService company;
     private final RuleService rules;
     private final LedgerService ledger;
+    private final com.account0.ledger.PostingService posting;
     private final PeriodLockService locks;
     private final ObjectMapper om;
 
-    public InvoiceService(JdbcTemplate jdbc, AuditService audit, CompanyService company, RuleService rules, LedgerService ledger, PeriodLockService locks, ObjectMapper om) {
+    public InvoiceService(JdbcTemplate jdbc, AuditService audit, CompanyService company, RuleService rules, LedgerService ledger, PeriodLockService locks, ObjectMapper om, com.account0.ledger.PostingService posting) {
+        this.posting = posting;
         this.jdbc = jdbc; this.audit = audit; this.company = company; this.rules = rules; this.ledger = ledger; this.locks = locks; this.om = om;
     }
 
@@ -213,6 +215,7 @@ public class InvoiceService {
         audit.record("user", "invoice", id, "confirm", "status", inv.get("status"), "CONFIRMED", warns.isEmpty() ? null : "acknowledged " + warns.size() + " warning(s)");
         Map<String, Object> after = get(id);
         ledger.postInvoice(after);
+        posting.syncAll();
         if (inv.get("document_id") != null) jdbc.update("UPDATE document SET status='CONFIRMED' WHERE id=?", inv.get("document_id"));
         if (saveRule) {
             @SuppressWarnings("unchecked") List<Map<String, Object>> ls = (List<Map<String, Object>>) after.get("lines");
@@ -231,6 +234,7 @@ public class InvoiceService {
         ledger.unpost("invoice", id);
         jdbc.update("UPDATE invoice SET status='DRAFT', confirmed_at=NULL WHERE id=?", id);
         audit.record("user", "invoice", id, "reopen", "status", "CONFIRMED", "DRAFT", "ledger entries reversed (deleted)");
+        posting.syncAll();
         if (inv.get("document_id") != null) jdbc.update("UPDATE document SET status='NEEDS_REVIEW' WHERE id=?", inv.get("document_id"));
         return get(id);
     }
@@ -242,6 +246,7 @@ public class InvoiceService {
         if ("CONFIRMED".equals(inv.get("status"))) ledger.unpost("invoice", id);
         jdbc.update("UPDATE invoice SET status='REJECTED' WHERE id=?", id);
         audit.record("user", "invoice", id, "reject", "status", inv.get("status"), "REJECTED", reason);
+        posting.syncAll();
         if (inv.get("document_id") != null) jdbc.update("UPDATE document SET status='REJECTED' WHERE id=?", inv.get("document_id"));
         return get(id);
     }

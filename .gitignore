@@ -9,3 +9,6 @@ frontend/next-env.d.ts
 frontend/tsconfig.tsbuildinfo
 .DS_Store
 *.log
+.next-gate/
+frontend/.next-gate/
+frontend/test-results/

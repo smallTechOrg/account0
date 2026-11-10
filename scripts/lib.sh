@@ -3,6 +3,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GATE_PORT="${GATE_PORT:-8799}"
 BASE="http://127.0.0.1:$GATE_PORT"
+# Gate builds go to a separate dist dir and proxy to the gate backend, so a running ./run.sh UI (port 3710) is never disturbed.
+export ACCOUNT0_DIST_DIR=.next-gate
+export ACCOUNT0_BACKEND_URL="$BASE"
 if [ -f "$ROOT/.env" ]; then set -a; source "$ROOT/.env"; set +a; fi
 
 pass() { echo "PASS: $*"; }
