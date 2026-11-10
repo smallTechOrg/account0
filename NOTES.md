@@ -22,14 +22,18 @@ Run start: 2026-11-10 03:47 (autonomous overnight build, branch feature/account0
 - P9: extraction is stubbed in the UI gate by env `ACCOUNT0_LLM_STUB_FIXTURE` (a `@Primary` transport returning a fixed JSON). Gate P9 spends no tokens; gates P1/P3/P7 still spend (~$0.15 total for 0-9).
 - Cosmetic: macOS `sed -i` again needed `''`; python edit scripts used instead.
 
-## HANDOFF (final, phases 0-9 built)
-- Done and gated GREEN (see git log / PR for last run): P0-P9. Run `./scripts/gate-pN.sh` (SKIP_UNIT=1 skips tests/build).
-- Run: `./run.sh` -> UI http://127.0.0.1:3710, API http://127.0.0.1:8710. Flyway migrations V1..V9. After pulling this phase RESTART the backend (new V9 migration) and rebuild the UI (`cd frontend && npx next build`).
-- P9 added: PostingService journals (bank receipts/payments incl. customer net-of-TDS, TDS deduct/deposit, payroll), Playwright UI gate (`frontend/e2e/ui.mjs`), UI polish (Indian grouping, month/FY pickers, empty states, error toasts, STUB/ASSUMED labels), GSTR-1 CDNUR for export notes, cancelled-document tracking (Table 13), QRMP warning, old-regime flag in payroll UI.
+- P10 (08:4x-09:3x): fixed the independent tax-correctness audit. WebSearch verified the UNCERTAIN items: Form 131 = old 16A (official FAQ), s.397(2) no-PAN rule (5% floor for 194Q kept, exact mapping marked "verify with CA"), DIR-3 KYC 3-year cycle by 30 June (first-cycle anchoring unclear in sources -> UI says verify with CA), Code on Social Security in force 21 Nov 2025 (due dates unverified -> citation only). s.393 payment codes come from secondary blogs -> labelled verify with CA. Item numbering (#27) left unchanged.
+- P10: the RCM time-of-supply fix moves an unpaid RCM invoice to invoice+61 days; the fixture Atlas invoice is now seeded with `rcm_paid_on` = invoice date in the gates/tests (assertions unchanged). gate_p6 count 85 -> 94 (new calendar items + one 15CA event).
+- P10: all gates p0-p10 green on the first full run after the changes; P1 extraction cost $0.079.
+
+## HANDOFF (final, phases 0-10 built)
+- Done and gated GREEN (last full run 2026-11-10, p0 with unit tests + UI build, p1-p10 with SKIP_UNIT=1): P0-P10. Run `./scripts/gate-pN.sh` (SKIP_UNIT=1 skips tests/build).
+- Run: `./run.sh` -> UI http://127.0.0.1:3710, API http://127.0.0.1:8710. Flyway migrations V1..V10. After pulling this phase RESTART the backend (new V10 migration: invoice.rcm_paid_on / nil_type / buyer_kind) and rebuild the UI (`cd frontend && npx next build`).
+- P10 (tax audit) changed numbers: 3B set-off now minimises cash; 4A(5) comes from matched GSTR-2B lines when 2B is imported (else PROVISIONAL); RCM tax goes to the month of its time of supply (enter the payment date on RCM invoices!); 194I is per month (₹50k); 194J_DIR new; no-PAN 5%/20%; DIR-3 KYC needs directors recorded (Calendar > Directors); GSTR-1 JSON is refused while an HSN/SAC is missing. Details: the "Assumed (P10)" lines in spec/capabilities.md; regression tests in P10AuditFixesTest.
 - Known gaps / ideas for next session:
   1. Gmail/Drive transport never run against live Google; needs a real OAuth client to verify (see README).
-  2. Tax assumptions are the `Assumed:` lines at the bottom of spec/capabilities.md (TDS rates/thresholds, new-regime slabs for later years, calendar dates, corpus paraphrases, P9 posting conventions). Have the CA review them.
-  3. Sec 195 (non-resident TDS), old-regime salary, surcharge >50L, professional tax are deliberately not computed (flagged to ask CA). QRMP only warns.
-  4. GSTR-1 JSON (incl. cdnur, doc_issue cancel) is best-effort portal shape - validate in the offline tool.
-  5. Bank: unmatched/ignored lines are not posted; salary payments and TDS challans are not tied to bank lines (challans credit "Bank / cash (challan payments)"). Re-assigning a TDS section recreates the entry and clears its deposit details (pre-existing behaviour).
-  6. UI e2e covers one happy path (profile -> upload -> review/confirm -> GST explain -> ledger, error toast, empty state); other screens are only smoke-tested for HTTP 200.
+  2. Tax assumptions are the `Assumed:` lines in spec/capabilities.md - have the CA review them (esp. P10: s.393 codes, DIR-3 first cycle, no-PAN mapping, RCM +61 days).
+  3. Not computed (notes only): Rules 42/43 common-credit reversal, Rule 37 180-day reversal (note when bank data exists), GSTR-1 Table 11 advances, Sec 195 TDS, old-regime salary, surcharge >50L, professional tax. QRMP only warns.
+  4. 2B: POSSIBLE_MATCH / AMOUNT_MISMATCH lines cannot be "accepted" by the user yet (they are left out of 4A(5)); an invoice claimed provisionally (no 2B) and later matched in another month's 2B can be double counted.
+  5. Ledger (#22 rest): no PF/ESI postings, salary payable not cleared by bank, no forex gain/loss or bank charges, challan suspense not reconciled with bank lines.
+  6. GSTR-1 JSON is best-effort portal shape - validate in the offline tool. UI e2e covers one happy path; P10 UI changes are only smoke-tested (HTTP 200).
