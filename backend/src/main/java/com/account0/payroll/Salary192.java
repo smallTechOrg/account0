@@ -2,7 +2,7 @@ package com.account0.payroll;
 
 /**
  * Sec 192 projection for the NEW tax regime (default u/s 115BAC), FY 2025-26 slabs (Finance Act 2025).
- * Assumed: the same slabs apply to FY 2026-27 — verify against the Budget of 1 Feb 2026 / the Income-tax Act 2025 before relying.
+ * The same slabs, the ₹12 lakh / ₹60,000 rebate and the ₹75,000 standard deduction continue for FY 2026-27 (Budget 2026, no change).
  * Pure arithmetic in paise. Old regime, surcharge-bearing incomes (> ₹50 lakh) and other income/deductions are NOT modelled — flagged, never guessed.
  */
 public final class Salary192 {
@@ -39,13 +39,21 @@ public final class Salary192 {
         return new Result(taxable, tax, cess, tax + cess, review, note);
     }
 
-    /** Nearest rupee (Sec 288B). */
+    /** Nearest rupee (TDS is rounded to the rupee in practice; Sec 288B rounds income/tax to ₹10 and is not the rule here). */
     public static long roundRupee(long paise) { return Math.floorDiv(paise + 50, 100) * 100; }
 
     /**
      * TDS for this month: (annual tax on projected income − TDS already deducted this FY) / remaining months, never negative.
      * @param ytdGrossBefore gross paid in earlier months of the FY, @param thisGross this month's gross, @param monthsRemainingInclThis 1..12
      */
+    /** Higher rate when the employee has no PAN (Sec 206AA / s.397(2)): the higher of the average rate and 20%; nil when no tax is payable on the projected income. */
+    public static final int NO_PAN_RATE_BP = 2000;
+    public static long monthlyTdsNoPan(long ytdGrossBefore, long thisGross, int monthsRemainingInclThis, long tdsDeductedBefore) {
+        long normal = monthlyTds(ytdGrossBefore, thisGross, monthsRemainingInclThis, tdsDeductedBefore);
+        if (annualTax(ytdGrossBefore + thisGross * monthsRemainingInclThis).totalTax() == 0) return 0;
+        return Math.max(normal, roundRupee(thisGross * NO_PAN_RATE_BP / 10_000));
+    }
+
     public static long monthlyTds(long ytdGrossBefore, long thisGross, int monthsRemainingInclThis, long tdsDeductedBefore) {
         long projected = ytdGrossBefore + thisGross * monthsRemainingInclThis;
         Result r = annualTax(projected);

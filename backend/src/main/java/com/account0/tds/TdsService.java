@@ -26,6 +26,9 @@ public class TdsService {
     }
     static String panFromGstin(String g) { return g != null && g.length() >= 12 ? g.substring(2, 12) : null; }
 
+    public static final String NON_RESIDENT_NOTE = "Payment to a non-resident: TDS u/s 195 (s.393(2) Income-tax Act 2025) at the rate in force or the treaty rate, and Form 15CA/15CB before remitting, may apply. Account0 does not compute Sec 195 — ask your CA. "
+            + "No equalisation levy applies to a foreign SaaS/online vendor any more: the 2% levy on e-commerce supplies was abolished from 1 Aug 2024 and the 6% levy on online advertising from 1 Apr 2025.";
+
     private boolean nonResident(Map<String, Object> inv) {
         String c = Objects.toString(inv.get("counterparty_country"), "");
         return "IMPORT_SERVICE_RCM".equals(inv.get("supply_type")) || (!c.isBlank() && !c.equalsIgnoreCase("India") && !c.equalsIgnoreCase("IN"));
@@ -41,7 +44,7 @@ public class TdsService {
             Map<String, Object> m = new LinkedHashMap<>(inv);
             boolean nr = nonResident(inv);
             m.put("nonResident", nr);
-            if (nr) m.put("note", "Payment to a non-resident: TDS u/s 195 (and Form 15CA/15CB) may apply. Account0 does not compute Sec 195 — ask your CA.");
+            if (nr) m.put("note", NON_RESIDENT_NOTE);
             else {
                 Map<String, Object> rule = rules.find(RuleService.matchKey((String) inv.get("counterparty_gstin"), (String) inv.get("counterparty_name")), "PURCHASE");
                 if (rule != null && rule.get("tds_section") != null) { m.put("suggestedSection", rule.get("tds_section")); m.put("suggestionSource", "from your rule"); }
@@ -100,7 +103,7 @@ public class TdsService {
         for (List<Map<String, Object>> l : g.values()) {
             Map<String, Object> f = l.get(0);
             var res = TdsEngine.compute(TdsSections.ALL.get((String) f.get("section")), TdsSections.PayeeType.valueOf((String) f.get("payee_type")), f.get("payee_pan") != null,
-                    l.stream().map(r -> new TdsEngine.Payment(((Number) r.get("id")).longValue(), ((Number) r.get("base_paise")).longValue())).toList());
+                    l.stream().map(r -> new TdsEngine.Payment(((Number) r.get("id")).longValue(), ((Number) r.get("base_paise")).longValue(), ((String) r.get("payment_date")).substring(0, 7))).toList());
             for (TdsEngine.Result x : res)
                 jdbc.update("UPDATE tds_entry SET rate_bp=?, tds_paise=?, status=?, reason=? WHERE id=?", x.rateBp(), x.tdsPaise(), x.status(), x.reason(), x.id());
         }
@@ -131,6 +134,7 @@ public class TdsService {
                 SELECT COALESCE(payee_pan, 'N:'||payee_name) AS k, MAX(payee_name) AS payee, section, SUM(base_paise) AS total, SUM(tds_paise) AS tds FROM tds_entry
                 WHERE tenant_id=? AND fy=? AND section<>'NONE' GROUP BY k, section""", Tenant.current(), fy)) {
             TdsSections.Section s = TdsSections.ALL.get((String) r.get("section"));
+            if (s.monthly() || s.annualThreshold() == 0) continue;   // monthly-threshold / no-threshold sections have no annual position
             long total = ((Number) r.get("total")).longValue();
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("annualThresholdPaise", s.annualThreshold());
@@ -149,7 +153,7 @@ public class TdsService {
             out.add(alert(nr ? "TDS_SEC195" : "TDS_UNDECIDED", nr ? "MEDIUM" : "LOW", (String) p.get("invoice_date"),
                     nr ? "Invoice " + p.get("invoice_no") + " from " + p.get("counterparty_name") + " is a payment to a non-resident — TDS u/s 195 / Form 15CA-CB may apply."
                        : "Invoice " + p.get("invoice_no") + " from " + p.get("counterparty_name") + " has no TDS decision — pick a section or mark 'not applicable'.",
-                    nr ? "Account0 does not compute Sec 195 (rate depends on the treaty, nature of payment and TRC). Ask your CA before remitting." : "TDS must be deducted at the time of credit or payment, whichever is earlier; failing to deduct disallows 30% of the expense (Sec 40(a)(ia)).",
+                    nr ? "Account0 does not compute Sec 195 (rate depends on the treaty, nature of payment and TRC). Ask your CA before remitting. (Equalisation levy no longer applies: 2% abolished from 1 Aug 2024, 6% from 1 Apr 2025.)" : "TDS must be deducted at the time of credit or payment, whichever is earlier; failing to deduct disallows 30% of the expense (Sec 40(a)(ia)).",
                     "invoice:" + p.get("id")));
         }
         for (Map<String, Object> r : jdbc.queryForList("SELECT DISTINCT fy FROM tds_entry WHERE tenant_id=?", t)) {

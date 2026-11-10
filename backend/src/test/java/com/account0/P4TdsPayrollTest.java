@@ -46,6 +46,10 @@ class P4TdsPayrollTest {
         assertThat(q.get(1).tdsPaise()).isEqualTo(1_000 * R);         // 0.1% of the 10 lakh above 50 lakh
         var np = TdsEngine.compute(TdsSections.ALL.get("194J_TECH"), TdsSections.PayeeType.COMPANY_OR_FIRM, false, pays(60_000));
         assertThat(np.get(0).tdsPaise()).isEqualTo(12_000 * R);       // 20% Sec 206AA
+        // audit #5: 194Q without PAN is 5%, not 20% (206AA proviso / s.397(2))
+        var qnp = TdsEngine.compute(TdsSections.ALL.get("194Q"), TdsSections.PayeeType.COMPANY_OR_FIRM, false, pays(6_000_000));
+        assertThat(qnp.get(0).rateBp()).isEqualTo(500);
+        assertThat(qnp.get(0).tdsPaise()).isEqualTo(50_000 * R);      // 5% of the ₹10 lakh above ₹50 lakh
         assertThat(TdsEngine.tds(1_234_50, 200)).isEqualTo(2_500);      // 2% of 1234.50 = 24.69 -> ₹25
     }
     @Test void salary192NewRegime() {

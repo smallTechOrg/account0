@@ -74,6 +74,10 @@ public class PayrollService {
                 long tds; String note; boolean review;
                 Salary192.Result res = Salary192.annualTax(projected);
                 if ("OLD".equals(r.get("regime"))) { tds = 0; note = "Old regime selected — not computed. Needs the employee's declarations (80C, HRA...); ask your CA."; review = true; }
+                else if (r.get("pan") == null) {
+                    tds = Salary192.monthlyTdsNoPan(ytdGross, gross, remaining, ytdTds); note = res.note() + (tds > 0 ? " No PAN: higher of 20% and the average rate (Sec 206AA / s.397(2)) — verify with CA." : " No PAN, but no tax is payable on the projected income, so no TDS.");
+                    review = true;
+                }
                 else { tds = Salary192.monthlyTds(ytdGross, gross, remaining, ytdTds); note = res.note(); review = res.needsCaReview(); }
                 jdbc.update("UPDATE payroll_line SET projected_annual_paise=?, annual_tax_paise=?, tds_paise=?, needs_ca_review=?, note=? WHERE id=?", projected, res.totalTax(), tds, review ? 1 : 0, note, r.get("id"));
                 ytdGross += gross; ytdTds += tds;
@@ -112,7 +116,7 @@ public class PayrollService {
     public List<Map<String, Object>> alerts() {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : jdbc.queryForList("SELECT month, SUM(tds_paise) AS tds, MAX(needs_ca_review) AS rv FROM payroll_line WHERE tenant_id=? GROUP BY month", Tenant.current())) {
-            if (((Number) r.get("rv")).intValue() == 1) out.add(TdsService.alert("PAYROLL_CA_REVIEW", "MEDIUM", (String) r.get("month"), "Payroll for " + r.get("month") + " has employees that Account0 does not compute (old regime or income above ₹50 lakh).", "Their Sec 192 TDS must be worked out by your CA.", "month:" + r.get("month")));
+            if (((Number) r.get("rv")).intValue() == 1) out.add(TdsService.alert("PAYROLL_CA_REVIEW", "MEDIUM", (String) r.get("month"), "Payroll for " + r.get("month") + " has employees that Account0 does not compute or that need a check (old regime, income above ₹50 lakh, or no PAN — higher rate applied).", "Their Sec 192 TDS must be worked out by your CA.", "month:" + r.get("month")));
         }
         for (Map<String, Object> r : jdbc.queryForList("SELECT month, SUM(tds_paise) AS tds FROM payroll_line WHERE tenant_id=? AND tds_paise>0 AND deposited_on IS NULL GROUP BY month", Tenant.current())) {
             YearMonth ym = YearMonth.parse((String) r.get("month"));
