@@ -1,0 +1,9 @@
+{"document_kind":{"value":"TAX_INVOICE","confidence":0.99},
+ "supplier":{"name":{"value":"Nimbus Hosting Solutions Private Limited","confidence":0.98},"gstin":{"value":"27AADCN4321D1ZW","confidence":0.97},"country":{"value":"India","confidence":0.9}},
+ "recipient":{"name":{"value":"Acme Cloudworks Private Limited","confidence":0.98},"gstin":{"value":"29AAKCA1234B1Z4","confidence":0.97}},
+ "invoice_no":{"value":"NHS/2026/1187","confidence":0.99},"invoice_date":{"value":"2026-10-08","confidence":0.99},
+ "currency":{"value":"INR","confidence":0.99},"place_of_supply":{"value":"Karnataka (29)","confidence":0.95},
+ "reverse_charge_printed":{"value":false,"confidence":0.9},
+ "lines":[{"description":"Hosting","hsn_sac":"998315","gst_rate":"18%","taxable_value":"50,000.00","igst":"9,000.00","confidence":0.95}],
+ "totals":{"taxable_value":{"value":"50000.00","confidence":0.98},"igst":{"value":"9000.00","confidence":0.98},"total":{"value":"59,000.00","confidence":0.98}},
+ "category_guess":{"value":"Expense: Cloud hosting","confidence":0.8},"notes":null}

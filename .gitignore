@@ -1,0 +1,14 @@
+.env
+secrets/
+data/
+backend/.gradle/
+backend/build/
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
+.DS_Store
+*.log
+.next-gate/
+frontend/.next-gate/
+frontend/test-results/

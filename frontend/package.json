@@ -1,0 +1,23 @@
+{
+  "name": "account0-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3710 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -p 3710 -H 127.0.0.1",
+    "test": "node --test --experimental-strip-types tests/*.test.ts"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "react": "19.1.10",
+    "react-dom": "19.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "playwright-core": "1.65.0",
+    "typescript": "5.8.3"
+  }
+}

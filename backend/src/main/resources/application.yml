@@ -1,0 +1,37 @@
+server:
+  port: ${ACCOUNT0_PORT:8710}
+  address: 127.0.0.1
+spring:
+  datasource:
+    url: jdbc:sqlite:${ACCOUNT0_DATA_DIR:../data}/account0.db?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 200MB
+account0:
+  data-dir: ${ACCOUNT0_DATA_DIR:../data}
+  inbox-dir: ${ACCOUNT0_INBOX_DIR:../data/inbox}
+  inbox-poll-ms: 10000
+  secret-key: ${ACCOUNT0_SECRET_KEY:}
+  google:
+    client-id: ${ACCOUNT0_GOOGLE_CLIENT_ID:}
+    client-secret: ${ACCOUNT0_GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${ACCOUNT0_GOOGLE_REDIRECT_URI:http://127.0.0.1:8710/api/google/callback}
+    ui-return-url: ${ACCOUNT0_UI_URL:http://127.0.0.1:3710}/inbox
+    sync-ms: 600000
+  llm:
+    base-url: ${ACCOUNT0_ANTHROPIC_BASE_URL:https://api.anthropic.com}
+    api-key: ${ACCOUNT0_ANTHROPIC_API_KEY:}
+    workspace-id: ${ACCOUNT0_ANTHROPIC_WORKSPACE_ID:}
+    extraction-model: claude-sonnet-5-5
+    cheap-model: claude-haiku-5-5
+    # USD per million tokens (input, output). Source: Anthropic price list cached 2026-11-03.
+    prices:
+      claude-sonnet-5-5: { input: 2.00, output: 10.00 }
+      claude-haiku-5-5: { input: 0.10, output: 0.50 }
